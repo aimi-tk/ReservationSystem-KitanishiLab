@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kitanishi Lab 共通機器・部屋予約システム</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- FontAwesome for Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">KL</div>
+      <div class="brand-title">
+        <h1>Kitanishi Lab 機器・部屋予約</h1>
+        <p>研究室 共有リソース管理システム</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div id="statusBadge" class="status-badge demo">
+        <span class="status-dot"></span>
+        <span id="statusText">デモモード (ローカル)</span>
+      </div>
+      <button class="btn btn-primary" onclick="openReservationModal()">
+        <i class="fa-solid fa-plus"></i> 新規予約
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="switchView('resourceMgmt')" title="機器・部屋の追加・編集">
+        <i class="fa-solid fa-sliders"></i> 機器・部屋の管理
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="openConfigModal()" title="Google Drive連携設定">
+        <i class="fa-brands fa-google-drive"></i> Drive設定
+      </button>
+      <button class="btn btn-secondary btn-sm" onclick="refreshData()" title="データ更新">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container (Full Width) -->
+  <div class="main-container">
+    <main class="content-area">
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="date-controls">
+          <button class="btn btn-secondary btn-sm" onclick="changeDate(-1)">
+            <i class="fa-solid fa-chevron-left"></i> 前日
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="setDateToToday()">今日</button>
+          <button class="btn btn-secondary btn-sm" onclick="changeDate(1)">
+            翌日 <i class="fa-solid fa-chevron-right"></i>
+          </button>
+          <input type="date" id="datePicker" class="form-control" style="width: auto; padding: 0.25rem 0.5rem;" onchange="onDatePickerChange(this.value)">
+          <span id="currentDateDisplay" class="current-date-display">2026年9月8日(火)</span>
+        </div>
+
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <div class="form-group" style="flex-direction: row; align-items: center; gap: 0.4rem;">
+            <input type="checkbox" id="toggle24h" onchange="renderViews()">
+            <label for="toggle24h" style="font-size: 0.8rem; cursor: pointer;">24時間表示</label>
+          </div>
+
+          <div class="view-tabs">
+            <button id="tabTimeline" class="tab-btn active" onclick="switchView('timeline')">
+              <i class="fa-solid fa-chart-gantt"></i> タイムライン
+            </button>
+            <button id="tabList" class="tab-btn" onclick="switchView('list')">
+              <i class="fa-solid fa-list-ul"></i> 予約一覧
+            </button>
+            <button id="tabResourceMgmt" class="tab-btn" onclick="switchView('resourceMgmt')">
+              <i class="fa-solid fa-sliders"></i> 機器・部屋の追加・編集
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- View Container -->
+      <div class="view-container">
+        
+        <!-- Timeline View -->
+        <div id="timelineView" class="timeline-card">
+          <div class="timeline-header">
+            <div class="timeline-resource-col">機器・部屋名</div>
+            <div id="timelineHoursHeader" class="timeline-hours-header">
+              <!-- JSで時間を挿入 -->
+            </div>
+          </div>
+          <div id="timelineRowsContainer">
+            <!-- JSで各リソース行と予約ブロックを挿入 -->
+          </div>
+        </div>
+
+        <!-- List View -->
+        <div id="listView" class="list-card" style="display: none;">
+          <div style="padding: 0.75rem 1rem; background: white; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem;">
+            <input type="text" id="listSearchInput" class="form-control" placeholder="使用者名や備考で検索..." onkeyup="renderListView()" style="max-width: 300px;">
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>対象リソース</th>
+                <th>使用者名</th>
+                <th>利用日時</th>
+                <th>備考</th>
+                <th>最終編集日時</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="listTableBody">
+              <!-- JSで挿入 -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Resource Management View -->
+        <div id="resourceMgmtView" class="list-card" style="display: none;">
+          <div style="padding: 0.75rem 1.25rem; background: white; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h3 style="font-size: 1rem; font-weight: 700;">登録機器・部屋一覧</h3>
+              <p style="font-size: 0.75rem; color: var(--text-muted);">研究室の共有機器や部屋の追加・編集・削除が行えます。</p>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="openResourceModal()">
+              <i class="fa-solid fa-plus"></i> 新規機器・部屋を追加
+            </button>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th style="width: 90px; text-align: center;">順序</th>
+                <th>機器・部屋名</th>
+                <th>設置場所</th>
+                <th>説明・注意事項</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="resourceTableBody">
+              <!-- JSで挿入 -->
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: 予約の新規登録・編集 -->
+  <div id="reservationModal" class="modal-backdrop">
+    <div class="modal modal-compact">
+      <div class="modal-header">
+        <div class="modal-title" id="reservationModalTitle">新規予約登録</div>
+        <button class="modal-close" onclick="closeReservationModal()">&times;</button>
+      </div>
+      <form id="reservationForm" onsubmit="handleReservationSubmit(event)">
+        <input type="hidden" id="editRevId">
+        <input type="hidden" id="resColor" value="#2563eb">
+        
+        <div class="modal-body">
+          <div id="modalError" class="alert-error"></div>
+
+          <div id="resMetaInfo" style="display: none; font-size: 0.725rem; color: var(--text-muted); background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px;">
+            <i class="fa-regular fa-clock"></i> 最終編集日時: <span id="resUpdatedAtDisplay" style="font-weight: 600;">-</span>
+          </div>
+
+          <!-- Row 1: 機器・部屋 & 使用者名 -->
+          <div class="form-row">
+            <div class="form-group" style="flex: 1.4;">
+              <label for="resSelect">予約する機器・部屋 <span style="color: var(--danger-color)">*</span></label>
+              <select id="resSelect" class="form-control" required></select>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="userName">使用者名 <span style="color: var(--danger-color)">*</span></label>
+              <input type="text" id="userName" class="form-control" placeholder="例: 北西 太郎" required>
+            </div>
+          </div>
+
+          <!-- Row 2: 開始日時 & 終了日時 -->
+          <div class="form-row">
+            <div class="form-group" style="flex: 1;">
+              <label>開始日時 <span style="color: var(--danger-color)">*</span></label>
+              <div style="display: flex; gap: 0.35rem;">
+                <input type="date" id="resStartDate" class="form-control" style="flex: 1.2;" required>
+                <select id="resStartTime" class="form-control" style="flex: 1;" required></select>
+              </div>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label>終了日時 <span style="color: var(--danger-color)">*</span></label>
+              <div style="display: flex; gap: 0.35rem;">
+                <input type="date" id="resEndDate" class="form-control" style="flex: 1.2;" required>
+                <select id="resEndTime" class="form-control" style="flex: 1;" required></select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: クイック時間設定 & Google カレンダー同期 -->
+          <div class="form-row" style="align-items: center;">
+            <div class="quick-duration-btns" style="margin-top: 0; flex: 1.2;">
+              <span style="font-size: 0.725rem; color: var(--text-muted); min-width: max-content;">時間追加:</span>
+              <button type="button" class="quick-btn" onclick="addDuration(30)">+30分</button>
+              <button type="button" class="quick-btn" onclick="addDuration(60)">+1時間</button>
+              <button type="button" class="quick-btn" onclick="addDuration(120)">+2時間</button>
+              <button type="button" class="quick-btn" onclick="addDuration(240)">+4時間</button>
+            </div>
+            <div style="flex: 1; display: flex; justify-content: flex-end;">
+              <label style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; font-weight: 500; font-size: 0.8rem;">
+                <input type="checkbox" id="syncCalendarCheck" checked style="width: 15px; height: 15px; accent-color: var(--primary-color);" onchange="toggleCalendarIdInput()">
+                <i class="fa-solid fa-calendar-check" style="color: var(--primary-color);"></i>
+                <span>Google カレンダーにも同期する</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Row 3.5: 同期先 Google カレンダー ID 指定 -->
+          <div id="calendarIdRow" class="form-row" style="align-items: center; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: -0.25rem;">
+            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+              <label for="resCalendarId" style="font-size: 0.725rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-brands fa-google"></i> 同期先 Google カレンダー ID / メールアドレス</span>
+                <span style="font-weight: normal; font-size: 0.7rem; color: #64748b;">未入力時は共通設定 (primary)</span>
+              </label>
+              <input type="text" id="resCalendarId" class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" placeholder="primary または username@gmail.com など">
+            </div>
+          </div>
+
+          <!-- Row 4: ラベルカラー (タブ選択) & 備考 -->
+          <div class="form-row" style="align-items: flex-start;">
+            <div class="form-group" style="flex: 1.1;">
+              <label>ラベルカラー (タブで選択)</label>
+              <div id="colorPickerGrid" class="color-picker-tabs">
+                <!-- JSで16色のタブを生成 -->
+              </div>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="resNotes">備考・使用目的</label>
+              <input type="text" id="resNotes" class="form-control" placeholder="例: サンプルAの蛍光撮影など">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" id="deleteRevModalBtn" style="display: none; color: var(--danger-color); margin-right: auto;" onclick="handleModalDeleteReservation()">
+            <i class="fa-solid fa-trash-can"></i> 予約を削除
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="closeReservationModal()">キャンセル</button>
+          <button type="submit" class="btn btn-primary btn-sm" id="saveRevBtn">予約を確定する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Google Drive 設定 -->
+  <div id="configModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Google Drive 連携設定</div>
+        <button class="modal-close" onclick="closeConfigModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.825rem; color: var(--text-muted);">
+          Google Apps Script (GAS) のウェブアプリURLを設定すると、Google Drive上のスプレッドシートと自動同期します。
+        </p>
+        <div class="form-group">
+          <label for="gasUrlInput">GAS ウェブアプリ URL</label>
+          <input type="url" id="gasUrlInput" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+        </div>
+        <div class="form-group">
+          <label for="gasCalendarIdInput">同期先 Google カレンダー ID (任意)</label>
+          <input type="text" id="gasCalendarIdInput" class="form-control" placeholder="primary (空欄の場合はメインカレンダー)">
+        </div>
+        <div style="font-size: 0.775rem; background: #f1f5f9; padding: 0.65rem; border-radius: 6px;">
+          <strong>設定方法:</strong><br>
+          1. 付属の <code>gas_backend.js</code> をスプレッドシートのApps Scriptに張り付け。<br>
+          2. Webアプリとしてデプロイして発行されたURLをここに入力します。
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="switchToDemoMode()">デモモードにする</button>
+        <button type="button" class="btn btn-primary" onclick="saveGasConfig()">設定を保存して接続</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: 新規・編集 リソース追加 -->
+  <div id="resourceModal" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title" id="resourceModalTitle">機器・部屋の追加</div>
+        <button class="modal-close" onclick="closeResourceModal()">&times;</button>
+      </div>
+      <form id="resourceForm" onsubmit="handleResourceSubmit(event)">
+        <input type="hidden" id="editResId">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="newResName">機器・部屋名 <span style="color: var(--danger-color)">*</span></label>
+            <input type="text" id="newResName" class="form-control" placeholder="例: ディープフリーザー" required>
+          </div>
+
+          <div class="form-group">
+            <label for="newResLocation">設置場所・部屋番号</label>
+            <input type="text" id="newResLocation" class="form-control" placeholder="例: 204号室">
+          </div>
+
+          <div class="form-group">
+            <label for="newResDesc">説明・注意事項</label>
+            <input type="text" id="newResDesc" class="form-control" placeholder="例: 要予約・操作マニュアル棚あり">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeResourceModal()">キャンセル</button>
+          <button type="submit" class="btn btn-primary" id="saveResBtn">登録する</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
