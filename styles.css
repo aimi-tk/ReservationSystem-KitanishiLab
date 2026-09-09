@@ -276,6 +276,9 @@ header {
   display: flex;
   align-items: center;
   background: #f1f5f9;
+  position: sticky;
+  left: 0;
+  z-index: 15;
 }
 
 .timeline-hours-header {
@@ -341,7 +344,9 @@ header {
   display: flex;
   align-items: center;
   background: inherit;
-  z-index: 5;
+  position: sticky;
+  left: 0;
+  z-index: 15;
 }
 
 .timeline-resource-name {
@@ -710,9 +715,284 @@ header {
   display: none;
 }
 
-/* Responsive */
+/* Monthly Calendar Grid */
+.monthly-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.monthly-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.monthly-day-header {
+  background: #f1f5f9;
+  padding: 0.5rem 0.25rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.monthly-day-header.sun {
+  color: #ef4444;
+  background: #fef2f2;
+}
+
+.monthly-day-header.sat {
+  color: #2563eb;
+  background: #eff6ff;
+}
+
+.monthly-day-cell {
+  background: white;
+  min-height: 105px;
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.monthly-day-cell:hover {
+  background-color: #f8fafc;
+}
+
+.monthly-day-cell.other-month {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  opacity: 0.75;
+}
+
+.monthly-date-num {
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-main);
+}
+
+.monthly-date-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.monthly-day-cell.today .monthly-date-badge {
+  background: var(--primary-color);
+  color: white;
+  font-weight: bold;
+}
+
+.monthly-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow-y: auto;
+  max-height: 78px;
+  flex: 1;
+}
+
+.monthly-event-pill {
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  color: white;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  transition: transform 0.1s ease, filter 0.1s ease;
+}
+
+.monthly-event-pill:hover {
+  transform: translateY(-1px);
+  filter: brightness(0.92);
+}
+
+/* Responsive Styles for Mobile & Tablet Devices */
 @media (max-width: 768px) {
+  .main-container {
+    height: auto;
+    min-height: calc(100dvh - 60px);
+    overflow: visible;
+  }
+
+  header {
+    padding: 0.5rem 0.75rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .brand {
+    gap: 0.5rem;
+  }
+
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+
+  .brand-title h1 {
+    font-size: 0.95rem;
+  }
+
+  .brand-title p {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .header-actions .btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.775rem;
+  }
+
+  .toolbar {
+    padding: 0.5rem 0.75rem;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .date-controls {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.35rem;
+  }
+
+  .current-date-display {
+    min-width: auto;
+    font-size: 0.95rem;
+    width: 100%;
+    text-align: center;
+    order: -1;
+    margin-bottom: 0.25rem;
+  }
+
+  .toolbar > div:last-child {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .view-tabs {
+    width: 100%;
+    display: flex;
+  }
+
+  .tab-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 0.45rem 0.25rem;
+    font-size: 0.775rem;
+  }
+
+  .view-container {
+    padding: 0.5rem;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   .timeline-card {
-    min-width: 700px;
+    min-width: 680px;
+  }
+
+  .timeline-resource-col,
+  .timeline-resource-info {
+    width: 140px;
+    min-width: 140px;
+    padding: 0.25rem 0.4rem;
+  }
+
+  .timeline-resource-name {
+    font-size: 0.75rem;
+  }
+
+  .timeline-resource-location {
+    font-size: 0.675rem;
+  }
+
+  /* Modals on Mobile Devices */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 0.75rem 1rem;
+    position: sticky;
+    top: 0;
+    background: var(--card-bg);
+    z-index: 10;
+  }
+
+  .modal-body {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .form-control {
+    font-size: 16px; /* iOS Safari prevent auto zoom */
+  }
+
+  .modal-footer {
+    padding: 0.75rem 1rem;
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+  }
+}
+
+@media (max-width: 480px) {
+  .monthly-grid {
+    font-size: 0.7rem;
+  }
+
+  .monthly-day-cell {
+    min-height: 75px;
+    padding: 0.2rem;
+  }
+
+  .monthly-date-num {
+    font-size: 0.725rem;
   }
 }

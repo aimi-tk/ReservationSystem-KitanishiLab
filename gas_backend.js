@@ -22,12 +22,12 @@ function setupDatabase() {
     resSheet = ss.insertSheet(SHEET_RESOURCES);
     resSheet.appendRow(["ID", "Name", "Location", "Description"]);
     const defaultResources = [
-      ["res-1", "Surgery table1", "007室", "吸入麻酔機、可動アーム"],
-      ["res-2", "Surgery table2", "007室", "Acute recording"],
-      ["res-3", "Perfusion", "007室", "使用中は水道利用不可"],
-      ["res-4", "Microtome", "007室", "Leica"],
-      ["res-5", "3D printer (Asiga)", "007室", "LogNoteあり"],
-      ["res-6", "3D printer (Bambu lab)", "007室", "LogNoteなし"],
+      ["res-1", "Surgery table1", "005室", "吸入麻酔機、可動アーム"],
+      ["res-2", "Surgery table2", "005室", "Acute recording"],
+      ["res-3", "Perfusion", "005室", "使用中は水道利用不可"],
+      ["res-4", "Microtome", "005室", "Leica"],
+      ["res-5", "3D printer (Asiga)", "005室", "LogNoteあり"],
+      ["res-6", "3D printer (Bambu lab)", "012室", "LogNoteなし"],
       ["res-7", "Microscopy", "012室", "ZEISS"],
       ["res-8", "Mouse behavior1", "003A室", "Miura"],
       ["res-9", "Mouse behavior2", "003A室", "Iida/Endo"],
@@ -67,8 +67,26 @@ function setupDatabase() {
  */
 function doGet(e) {
   try {
-    const action = (e && e.parameter && e.parameter.action) ? e.parameter.action : "getData";
-    if (action === "getData") return jsonResponse({ status: "success", ...getAllData() });
+    const action = (e && e.parameter && e.parameter.action) ? e.parameter.action : null;
+    
+    // API データ取得呼び出し
+    if (action === "getData") {
+      return jsonResponse({ status: "success", ...getAllData() });
+    }
+
+    // ブラウザで直接 GAS URL を開いた場合（GASでのHTML直配信モード / Option B）
+    if (!action || action === "page") {
+      try {
+        return HtmlService.createHtmlOutputFromFile('index')
+          .setTitle('Kitanishi Lab 機器・部屋予約')
+          .setXframeOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+          .addMetaTag('viewport', 'width=device-width, initial-scale=1.0, maximum-scale=5.0');
+      } catch (htmlErr) {
+        // index.htmlがGASプロジェクトに貼り付けられていない場合は既存のJSONデータを返す
+        return jsonResponse({ status: "success", ...getAllData() });
+      }
+    }
+
     return jsonResponse({ status: "error", message: "Unknown action" });
   } catch (error) {
     return jsonResponse({ status: "error", message: error.toString() });
@@ -180,23 +198,24 @@ function getReservations() {
  * Google カレンダー同期ヘルパー
  */
 function getTargetCalendar(calendarId) {
+  if (!calendarId) return null;
   try {
-    if (calendarId && calendarId !== 'primary') {
-      const cal = CalendarApp.getCalendarById(calendarId);
-      if (cal) return cal;
-    }
-    return CalendarApp.getDefaultCalendar();
+    if (calendarId === 'primary') return CalendarApp.getDefaultCalendar();
+    const cal = CalendarApp.getCalendarById(calendarId);
+    if (cal) return cal;
+    return null;
   } catch (err) {
     Logger.log("Calendar fetch error: " + err.toString());
-    return CalendarApp.getDefaultCalendar();
+    return null;
   }
 }
 
 function syncGoogleCalendarEvent(data, calendarId) {
-  if (data.syncCalendar === false) return "";
+  const targetCalId = calendarId || data.calendarId;
+  if (!targetCalId || data.syncCalendar === false) return "";
 
   try {
-    const cal = getTargetCalendar(calendarId || data.calendarId);
+    const cal = getTargetCalendar(targetCalId);
     if (!cal) return "";
 
     const title = `[予約] ${data.resourceName || '機器・部屋'} (${data.userName})`;
@@ -214,9 +233,13 @@ function syncGoogleCalendarEvent(data, calendarId) {
 
 function updateGoogleCalendarEvent(googleEventId, data, calendarId) {
   const calId = calendarId || data.calendarId;
-  if (!googleEventId) {
-    if (data.syncCalendar !== false) return syncGoogleCalendarEvent(data, calId);
+  if (!calId || data.syncCalendar === false) {
+    if (googleEventId) deleteGoogleCalendarEvent(googleEventId, calId);
     return "";
+  }
+
+  if (!googleEventId) {
+    return syncGoogleCalendarEvent(data, calId);
   }
 
   try {
@@ -231,13 +254,7 @@ function updateGoogleCalendarEvent(googleEventId, data, calendarId) {
     }
 
     if (!event) {
-      if (data.syncCalendar !== false) return syncGoogleCalendarEvent(data, calId);
-      return "";
-    }
-
-    if (data.syncCalendar === false) {
-      event.deleteEvent();
-      return "";
+      return syncGoogleCalendarEvent(data, calId);
     }
 
     const title = `[予約] ${data.resourceName || '機器・部屋'} (${data.userName})`;

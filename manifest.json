@@ -1,0 +1,16 @@
+{
+  "name": "Kitanishi Lab 機器・部屋予約システム",
+  "short_name": "機器予約",
+  "description": "研究室 共有機器・部屋の予約管理システム",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%232563eb'/><text x='50' y='65' font-size='50' font-weight='bold' text-anchor='middle' fill='white'>KL</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

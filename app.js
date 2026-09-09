@@ -26,13 +26,18 @@ const PRESET_COLORS = [
   "#18181b"  // Charcoal (ダークグレー)
 ];
 
+// アプリケーション設定 (デプロイ済みGAS URLの既定値。事前埋め込みでスマホ側入力不要)
+const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "";
+
 // アプリケーション状態
 let state = {
-  gasUrl: localStorage.getItem('kitanishi_gas_url') || '',
-  calendarId: localStorage.getItem('kitanishi_gas_calendar_id') || 'primary',
+  gasUrl: localStorage.getItem('kitanishi_gas_url') || DEFAULT_GAS_URL,
+  calendarId: localStorage.getItem('kitanishi_gas_calendar_id') || '',
   isLiveMode: false,
   currentDate: new Date(),
-  currentView: 'timeline', // 'timeline', 'list', 'resourceMgmt'
+  currentView: 'timeline', // 'timeline', 'monthly', 'list', 'resourceMgmt'
+  currentMonth: new Date(),
+  selectedMonthlyResourceId: '',
   resources: [],
   reservations: []
 };
@@ -272,13 +277,23 @@ function updateDateDisplay() {
 
 function switchView(viewName) {
   state.currentView = viewName;
-  document.getElementById('tabTimeline').classList.toggle('active', viewName === 'timeline');
-  document.getElementById('tabList').classList.toggle('active', viewName === 'list');
-  document.getElementById('tabResourceMgmt').classList.toggle('active', viewName === 'resourceMgmt');
+  const tabTimeline = document.getElementById('tabTimeline');
+  if (tabTimeline) tabTimeline.classList.toggle('active', viewName === 'timeline');
+  const tabMonthly = document.getElementById('tabMonthly');
+  if (tabMonthly) tabMonthly.classList.toggle('active', viewName === 'monthly');
+  const tabList = document.getElementById('tabList');
+  if (tabList) tabList.classList.toggle('active', viewName === 'list');
+  const tabResourceMgmt = document.getElementById('tabResourceMgmt');
+  if (tabResourceMgmt) tabResourceMgmt.classList.toggle('active', viewName === 'resourceMgmt');
 
-  document.getElementById('timelineView').style.display = viewName === 'timeline' ? 'flex' : 'none';
-  document.getElementById('listView').style.display = viewName === 'list' ? 'block' : 'none';
-  document.getElementById('resourceMgmtView').style.display = viewName === 'resourceMgmt' ? 'block' : 'none';
+  const timelineView = document.getElementById('timelineView');
+  if (timelineView) timelineView.style.display = viewName === 'timeline' ? 'flex' : 'none';
+  const monthlyView = document.getElementById('monthlyView');
+  if (monthlyView) monthlyView.style.display = viewName === 'monthly' ? 'block' : 'none';
+  const listView = document.getElementById('listView');
+  if (listView) listView.style.display = viewName === 'list' ? 'block' : 'none';
+  const resourceMgmtView = document.getElementById('resourceMgmtView');
+  if (resourceMgmtView) resourceMgmtView.style.display = viewName === 'resourceMgmt' ? 'block' : 'none';
 
   renderViews();
 }
@@ -286,10 +301,231 @@ function switchView(viewName) {
 function renderViews() {
   if (state.currentView === 'timeline') {
     renderTimelineView();
+  } else if (state.currentView === 'monthly') {
+    renderMonthlyView();
   } else if (state.currentView === 'list') {
     renderListView();
   } else if (state.currentView === 'resourceMgmt') {
     renderResourceMgmtView();
+  }
+}
+
+function changeMonth(delta) {
+  state.currentMonth.setMonth(state.currentMonth.getMonth() + delta);
+  renderMonthlyView();
+}
+
+function setMonthToCurrent() {
+  state.currentMonth = new Date();
+  renderMonthlyView();
+}
+
+function onMonthlyResourceChange(resId) {
+  state.selectedMonthlyResourceId = resId;
+  renderMonthlyView();
+}
+
+function populateMonthlyResourceOptions() {
+  const select = document.getElementById('monthlyResourceSelect');
+  if (!select) return;
+
+  const currentVal = (select.value !== undefined && select.value !== null) ? select.value : state.selectedMonthlyResourceId;
+  select.innerHTML = '';
+
+  const optDefault = document.createElement('option');
+  optDefault.value = '';
+  optDefault.textContent = '-- 機器・部屋を選択してください --';
+  select.appendChild(optDefault);
+
+  state.resources.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = `${r.name}${r.location ? ' (' + r.location + ')' : ''}`;
+    select.appendChild(opt);
+  });
+
+  if (Array.from(select.options).some(o => o.value === currentVal)) {
+    select.value = currentVal;
+  } else {
+    select.value = '';
+  }
+  state.selectedMonthlyResourceId = select.value;
+}
+
+function renderMonthlyView() {
+  populateMonthlyResourceOptions();
+
+  const yyyy = state.currentMonth.getFullYear();
+  const mm = state.currentMonth.getMonth(); // 0-11
+
+  const monthDisplay = document.getElementById('currentMonthDisplay');
+  if (monthDisplay) {
+    monthDisplay.textContent = `${yyyy}年${mm + 1}月`;
+  }
+
+  const wrapper = document.getElementById('monthlyTimelineWrapper');
+  if (!wrapper) return;
+  wrapper.innerHTML = '';
+
+  if (!state.selectedMonthlyResourceId) {
+    wrapper.innerHTML = `
+      <div class="empty-state-card" style="padding: 3.5rem 1.5rem; text-align: center; color: var(--text-muted); background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color); box-shadow: var(--shadow-sm);">
+        <i class="fa-solid fa-hand-pointer" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 0.85rem;"></i>
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.4rem;">機器・部屋を選択してください</h3>
+        <p style="font-size: 0.875rem;">右上部のプルダウンメニューから予約状況を確認・入力したい機器・部屋を選択すると、1ヶ月分のタイムラインが表示されます。</p>
+      </div>
+    `;
+    return;
+  }
+
+  const is24h = document.getElementById('toggle24h').checked;
+  const startHour = is24h ? 0 : 8;
+  const endHour = is24h ? 24 : 22;
+  const totalHours = endHour - startHour;
+
+  const daysInMonth = new Date(yyyy, mm + 1, 0).getDate();
+  const todayStr = formatDateISO(new Date());
+
+  const targetRes = state.resources.find(r => r.id === state.selectedMonthlyResourceId);
+  const resName = targetRes ? targetRes.name : '';
+
+  wrapper.innerHTML = `
+    <div class="timeline-card">
+      <div class="timeline-header">
+        <div class="timeline-resource-col" style="font-weight: 700;">日付 (${escapeHtml(resName)})</div>
+        <div id="monthlyHoursHeader" class="timeline-hours-header"></div>
+      </div>
+      <div id="monthlyRowsContainer"></div>
+    </div>
+  `;
+
+  const hoursHeader = document.getElementById('monthlyHoursHeader');
+  for (let h = startHour; h < endHour; h++) {
+    const cell = document.createElement('div');
+    cell.className = 'timeline-hour-cell';
+    
+    const label = document.createElement('span');
+    label.className = 'timeline-hour-label';
+    label.textContent = `${String(h).padStart(2, '0')}:00`;
+    cell.appendChild(label);
+
+    if (h === endHour - 1) {
+      const endLabel = document.createElement('span');
+      endLabel.className = 'timeline-hour-label end-label';
+      endLabel.textContent = `${String(endHour).padStart(2, '0')}:00`;
+      cell.appendChild(endLabel);
+    }
+
+    hoursHeader.appendChild(cell);
+  }
+
+  const container = document.getElementById('monthlyRowsContainer');
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(yyyy, mm, d);
+    const dateStr = formatDateISO(dateObj);
+    const dayOfWeek = dateObj.getDay();
+    const dayName = dayNames[dayOfWeek];
+    const isToday = (dateStr === todayStr);
+
+    const row = document.createElement('div');
+    row.className = 'timeline-row';
+    if (isToday) row.style.backgroundColor = '#eff6ff';
+
+    const infoCol = document.createElement('div');
+    infoCol.className = 'timeline-resource-info';
+    infoCol.style.padding = '0.35rem 0.65rem';
+
+    let dayBadgeStyle = '';
+    if (dayOfWeek === 0) dayBadgeStyle = 'color: #ef4444; font-weight: 700;';
+    else if (dayOfWeek === 6) dayBadgeStyle = 'color: #2563eb; font-weight: 700;';
+
+    let todayBadge = isToday ? '<span style="background: var(--primary-color); color: white; border-radius: 9999px; padding: 0.05rem 0.35rem; font-size: 0.65rem; margin-left: 0.35rem;">今日</span>' : '';
+
+    infoCol.innerHTML = `
+      <div class="timeline-resource-name" style="font-size: 0.825rem;">
+        <strong style="${dayBadgeStyle}">${mm + 1}/${d} (${dayName})</strong>${todayBadge}
+      </div>
+    `;
+    row.appendChild(infoCol);
+
+    const gridArea = document.createElement('div');
+    gridArea.className = 'timeline-grid';
+    gridArea.dataset.resourceId = state.selectedMonthlyResourceId;
+
+    for (let h = startHour; h < endHour; h++) {
+      const gridCell = document.createElement('div');
+      gridCell.className = 'timeline-grid-cell';
+      gridArea.appendChild(gridCell);
+    }
+
+    setupGridDragSelection(gridArea, state.selectedMonthlyResourceId, dateStr, startHour, endHour);
+
+    const dayRevs = state.reservations.filter(r => {
+      if (r.resourceId !== state.selectedMonthlyResourceId) return false;
+      const rStartISO = r.startTime.split('T')[0];
+      const rEndISO = r.endTime.split('T')[0];
+      return (rStartISO === dateStr || rEndISO === dateStr || (rStartISO < dateStr && rEndISO > dateStr));
+    });
+
+    dayRevs.forEach(rev => {
+      const sDate = new Date(rev.startTime);
+      const eDate = new Date(rev.endTime);
+
+      const dayStart = new Date(`${dateStr}T${String(startHour).padStart(2, '0')}:00:00`);
+      const dayEnd = new Date(`${dateStr}T${String(endHour).padStart(2, '0')}:00:00`);
+
+      if (eDate <= dayStart || sDate >= dayEnd) return;
+
+      const effectiveStart = sDate < dayStart ? dayStart : sDate;
+      const effectiveEnd = eDate > dayEnd ? dayEnd : eDate;
+
+      const startOffsetMinutes = (effectiveStart - dayStart) / (1000 * 60);
+      const durationMinutes = (effectiveEnd - effectiveStart) / (1000 * 60);
+
+      const leftPercent = (startOffsetMinutes / (totalHours * 60)) * 100;
+      const widthPercent = (durationMinutes / (totalHours * 60)) * 100;
+
+      const sTimeStr = formatTimeHHMM(sDate);
+      const eTimeStr = formatTimeHHMM(eDate);
+
+      const revColor = rev.color || '#2563eb';
+      const updatedDisplay = formatDateTimeFull(rev.updatedAt || rev.createdAt);
+      const notesPart = rev.notes ? ` - ${escapeHtml(rev.notes)}` : '';
+
+      const block = document.createElement('div');
+      block.className = 'reservation-block';
+      block.style.left = `${leftPercent}%`;
+      block.style.width = `${widthPercent}%`;
+      block.style.backgroundColor = revColor;
+      block.title = `使用者: ${rev.userName}\n時間: ${sTimeStr} ~ ${eTimeStr}\n備考: ${rev.notes || 'なし'}\n最終編集: ${updatedDisplay}\n(ドラッグで移動 / クリックで編集)`;
+
+      block.innerHTML = `
+        <span class="reservation-block-text">
+          <i class="fa-solid fa-user"></i> <strong>${escapeHtml(rev.userName)}</strong> (${sTimeStr}-${eTimeStr})${notesPart}
+        </span>
+        <button class="reservation-del-btn" onclick="event.stopPropagation(); deleteReservation('${rev.id}')" title="削除">&times;</button>
+      `;
+
+      setupBlockDragAndDrop(block, rev, dateStr, startHour, endHour);
+
+      gridArea.appendChild(block);
+    });
+
+    row.appendChild(gridArea);
+    container.appendChild(row);
+  }
+}
+
+function openReservationModalWithResourceAndDate(resId, dateStr) {
+  openReservationModal();
+  if (resId) {
+    document.getElementById('resSelect').value = resId;
+  }
+  if (dateStr) {
+    document.getElementById('resStartDate').value = dateStr;
+    document.getElementById('resEndDate').value = dateStr;
   }
 }
 
@@ -766,6 +1002,55 @@ function toggleCalendarIdInput() {
   }
 }
 
+function populateAutocompleteDatalists() {
+  const nameList = document.getElementById('userNameList');
+
+  if (nameList) {
+    nameList.innerHTML = '';
+    const uniqueNames = [...new Set(state.reservations.map(r => r.userName).filter(Boolean))];
+    uniqueNames.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      nameList.appendChild(opt);
+    });
+  }
+
+  const currentUserName = document.getElementById('userName') ? document.getElementById('userName').value : '';
+  updatePerUserDatalists(currentUserName);
+}
+
+function updatePerUserDatalists(targetUserName) {
+  const emailList = document.getElementById('userEmailList');
+  const notesList = document.getElementById('resNotesList');
+
+  const trimmedName = (targetUserName || '').trim().toLowerCase();
+
+  // 過去予約データの中から、入力された「使用者名」に一致する予約のみを抽出
+  const userReservations = trimmedName 
+    ? state.reservations.filter(r => (r.userName || '').trim().toLowerCase() === trimmedName)
+    : [];
+
+  if (emailList) {
+    emailList.innerHTML = '';
+    const uniqueEmails = [...new Set(userReservations.map(r => r.calendarId).filter(Boolean))];
+    uniqueEmails.forEach(email => {
+      const opt = document.createElement('option');
+      opt.value = email;
+      emailList.appendChild(opt);
+    });
+  }
+
+  if (notesList) {
+    notesList.innerHTML = '';
+    const uniqueNotes = [...new Set(userReservations.map(r => r.notes).filter(Boolean))];
+    uniqueNotes.forEach(note => {
+      const opt = document.createElement('option');
+      opt.value = note;
+      notesList.appendChild(opt);
+    });
+  }
+}
+
 function openReservationModal() {
   document.getElementById('editRevId').value = '';
   document.getElementById('reservationModalTitle').textContent = '新規予約登録';
@@ -779,9 +1064,10 @@ function openReservationModal() {
   if (syncCheck) syncCheck.checked = true;
 
   const calInput = document.getElementById('resCalendarId');
-  if (calInput) calInput.value = state.calendarId || 'primary';
+  if (calInput) calInput.value = '';
   toggleCalendarIdInput();
 
+  populateAutocompleteDatalists();
   selectColor(PRESET_COLORS[0]);
   resetReservationFormTimes();
   document.getElementById('reservationModal').classList.add('open');
@@ -818,6 +1104,8 @@ function editReservationModal(revId) {
   const rev = state.reservations.find(r => r.id === revId);
   if (!rev) return;
 
+  populateAutocompleteDatalists();
+
   document.getElementById('editRevId').value = rev.id;
   document.getElementById('reservationModalTitle').textContent = '予約の編集・確認';
   document.getElementById('saveRevBtn').textContent = '変更を保存する';
@@ -848,7 +1136,7 @@ function editReservationModal(revId) {
 
   const calInput = document.getElementById('resCalendarId');
   if (calInput) {
-    calInput.value = rev.calendarId || state.calendarId || 'primary';
+    calInput.value = rev.calendarId || '';
   }
   toggleCalendarIdInput();
 
@@ -986,9 +1274,12 @@ async function handleReservationSubmit(event) {
 
   const resObj = state.resources.find(r => r.id === resourceId);
   const nowISO = new Date().toISOString();
-  const syncCalendar = document.getElementById('syncCalendarCheck') ? document.getElementById('syncCalendarCheck').checked : true;
+  const syncCheckVal = document.getElementById('syncCalendarCheck') ? document.getElementById('syncCalendarCheck').checked : true;
   const calInput = document.getElementById('resCalendarId');
-  const targetCalendarId = (calInput && calInput.value.trim()) ? calInput.value.trim() : (state.calendarId || 'primary');
+  const userEnteredCalId = (calInput && calInput.value.trim()) ? calInput.value.trim() : '';
+
+  // カレンダーIDが入力されており、かつ同期チェックがONの場合のみGoogleカレンダーに同期
+  const isSyncOn = Boolean(userEnteredCalId && syncCheckVal);
 
   const revData = {
     resourceId,
@@ -998,8 +1289,8 @@ async function handleReservationSubmit(event) {
     userName,
     notes,
     color,
-    syncCalendar,
-    calendarId: targetCalendarId,
+    syncCalendar: isSyncOn,
+    calendarId: isSyncOn ? userEnteredCalId : '',
     updatedAt: nowISO
   };
 
@@ -1250,7 +1541,7 @@ async function moveResourceOrder(resId, direction) {
 
 function openConfigModal() {
   const calInput = document.getElementById('gasCalendarIdInput');
-  if (calInput) calInput.value = state.calendarId || 'primary';
+  if (calInput) calInput.value = state.calendarId || '';
   document.getElementById('configModal').classList.add('open');
 }
 
@@ -1261,7 +1552,7 @@ function closeConfigModal() {
 function saveGasConfig() {
   const url = document.getElementById('gasUrlInput').value.trim();
   const calIdInput = document.getElementById('gasCalendarIdInput');
-  const calId = calIdInput ? (calIdInput.value.trim() || 'primary') : 'primary';
+  const calId = calIdInput ? calIdInput.value.trim() : '';
 
   if (!url) {
     alert('URLを入力してください。');

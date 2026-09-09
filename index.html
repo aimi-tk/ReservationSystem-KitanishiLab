@@ -1,13 +1,21 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>Kitanishi Lab 共通機器・部屋予約システム</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="機器予約">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
 
   <!-- Header -->
@@ -52,7 +60,8 @@
           <button class="btn btn-secondary btn-sm" onclick="changeDate(1)">
             翌日 <i class="fa-solid fa-chevron-right"></i>
           </button>
-          <input type="date" id="datePicker" class="form-control" style="width: auto; padding: 0.25rem 0.5rem;" onchange="onDatePickerChange(this.value)">
+          <input type="date" id="datePicker" class="form-control" style="width: auto; padding: 0.25rem 0.5rem;"
+            onchange="onDatePickerChange(this.value)">
           <span id="currentDateDisplay" class="current-date-display">2026年9月8日(火)</span>
         </div>
 
@@ -66,11 +75,11 @@
             <button id="tabTimeline" class="tab-btn active" onclick="switchView('timeline')">
               <i class="fa-solid fa-chart-gantt"></i> タイムライン
             </button>
+            <button id="tabMonthly" class="tab-btn" onclick="switchView('monthly')">
+              <i class="fa-solid fa-calendar-days"></i> 機器・部屋別予約
+            </button>
             <button id="tabList" class="tab-btn" onclick="switchView('list')">
               <i class="fa-solid fa-list-ul"></i> 予約一覧
-            </button>
-            <button id="tabResourceMgmt" class="tab-btn" onclick="switchView('resourceMgmt')">
-              <i class="fa-solid fa-sliders"></i> 機器・部屋の追加・編集
             </button>
           </div>
         </div>
@@ -78,7 +87,7 @@
 
       <!-- View Container -->
       <div class="view-container">
-        
+
         <!-- Timeline View -->
         <div id="timelineView" class="timeline-card">
           <div class="timeline-header">
@@ -92,10 +101,41 @@
           </div>
         </div>
 
+        <!-- Resource Monthly Timeline View (機器・部屋別予約) -->
+        <div id="monthlyView" style="display: none; flex-direction: column; gap: 0.75rem;">
+          <div class="monthly-toolbar"
+            style="padding: 0.75rem 1rem; background: white; border: 1px solid var(--border-color); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+              <button class="btn btn-secondary btn-sm" onclick="changeMonth(-1)">
+                <i class="fa-solid fa-chevron-left"></i> 前月
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="setMonthToCurrent()">今月</button>
+              <button class="btn btn-secondary btn-sm" onclick="changeMonth(1)">
+                翌月 <i class="fa-solid fa-chevron-right"></i>
+              </button>
+              <span id="currentMonthDisplay"
+                style="font-weight: 700; font-size: 1.05rem; margin-left: 0.5rem; color: var(--text-main);">2026年9月</span>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <label for="monthlyResourceSelect"
+                style="font-size: 0.85rem; font-weight: 700; color: var(--text-main);">対象の機器・部屋:</label>
+              <select id="monthlyResourceSelect" class="form-control"
+                style="width: auto; min-width: 240px; font-weight: 600; border-color: var(--primary-color);"
+                onchange="onMonthlyResourceChange(this.value)"></select>
+            </div>
+          </div>
+
+          <div id="monthlyTimelineWrapper">
+            <!-- JSで空状態メッセージ または 日付縦列×時刻横列のタイムラインテーブルを生成 -->
+          </div>
+        </div>
+
         <!-- List View -->
         <div id="listView" class="list-card" style="display: none;">
-          <div style="padding: 0.75rem 1rem; background: white; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem;">
-            <input type="text" id="listSearchInput" class="form-control" placeholder="使用者名や備考で検索..." onkeyup="renderListView()" style="max-width: 300px;">
+          <div
+            style="padding: 0.75rem 1rem; background: white; border-bottom: 1px solid var(--border-color); display: flex; gap: 1rem;">
+            <input type="text" id="listSearchInput" class="form-control" placeholder="使用者名や備考で検索..."
+              onkeyup="renderListView()" style="max-width: 300px;">
           </div>
           <table class="table">
             <thead>
@@ -116,7 +156,8 @@
 
         <!-- Resource Management View -->
         <div id="resourceMgmtView" class="list-card" style="display: none;">
-          <div style="padding: 0.75rem 1.25rem; background: white; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+          <div
+            style="padding: 0.75rem 1.25rem; background: white; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
             <div>
               <h3 style="font-size: 1rem; font-weight: 700;">登録機器・部屋一覧</h3>
               <p style="font-size: 0.75rem; color: var(--text-muted);">研究室の共有機器や部屋の追加・編集・削除が行えます。</p>
@@ -155,12 +196,14 @@
       <form id="reservationForm" onsubmit="handleReservationSubmit(event)">
         <input type="hidden" id="editRevId">
         <input type="hidden" id="resColor" value="#2563eb">
-        
+
         <div class="modal-body">
           <div id="modalError" class="alert-error"></div>
 
-          <div id="resMetaInfo" style="display: none; font-size: 0.725rem; color: var(--text-muted); background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px;">
-            <i class="fa-regular fa-clock"></i> 最終編集日時: <span id="resUpdatedAtDisplay" style="font-weight: 600;">-</span>
+          <div id="resMetaInfo"
+            style="display: none; font-size: 0.725rem; color: var(--text-muted); background: #f1f5f9; padding: 0.25rem 0.5rem; border-radius: 4px;">
+            <i class="fa-regular fa-clock"></i> 最終編集日時: <span id="resUpdatedAtDisplay"
+              style="font-weight: 600;">-</span>
           </div>
 
           <!-- Row 1: 機器・部屋 & 使用者名 -->
@@ -171,7 +214,8 @@
             </div>
             <div class="form-group" style="flex: 1;">
               <label for="userName">使用者名 <span style="color: var(--danger-color)">*</span></label>
-              <input type="text" id="userName" class="form-control" placeholder="例: 北西 太郎" required>
+              <input type="text" id="userName" name="username" list="userNameList" autocomplete="on" class="form-control" placeholder="例: 北西" required oninput="updatePerUserDatalists(this.value)">
+              <datalist id="userNameList"></datalist>
             </div>
           </div>
 
@@ -203,8 +247,11 @@
               <button type="button" class="quick-btn" onclick="addDuration(240)">+4時間</button>
             </div>
             <div style="flex: 1; display: flex; justify-content: flex-end;">
-              <label style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; font-weight: 500; font-size: 0.8rem;">
-                <input type="checkbox" id="syncCalendarCheck" checked style="width: 15px; height: 15px; accent-color: var(--primary-color);" onchange="toggleCalendarIdInput()">
+              <label
+                style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; font-weight: 500; font-size: 0.8rem;">
+                <input type="checkbox" id="syncCalendarCheck" checked
+                  style="width: 15px; height: 15px; accent-color: var(--primary-color);"
+                  onchange="toggleCalendarIdInput()">
                 <i class="fa-solid fa-calendar-check" style="color: var(--primary-color);"></i>
                 <span>Google カレンダーにも同期する</span>
               </label>
@@ -212,13 +259,16 @@
           </div>
 
           <!-- Row 3.5: 同期先 Google カレンダー ID 指定 -->
-          <div id="calendarIdRow" class="form-row" style="align-items: center; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: -0.25rem;">
+          <div id="calendarIdRow" class="form-row"
+            style="align-items: center; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: -0.25rem;">
             <div class="form-group" style="flex: 1; margin-bottom: 0;">
-              <label for="resCalendarId" style="font-size: 0.725rem; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-                <span><i class="fa-brands fa-google"></i> 同期先 Google カレンダー ID / メールアドレス</span>
-                <span style="font-weight: normal; font-size: 0.7rem; color: #64748b;">未入力時は共通設定 (primary)</span>
+              <label for="resCalendarId" style="font-size: 0.725rem; color: var(--text-muted);">
+                <i class="fa-brands fa-google"></i> 同期先 Google カレンダー ID / メールアドレス (任意)
               </label>
-              <input type="text" id="resCalendarId" class="form-control" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;" placeholder="primary または username@gmail.com など">
+              <input type="text" id="resCalendarId" name="useremail" list="userEmailList" autocomplete="on" class="form-control"
+                style="font-size: 0.8rem; padding: 0.25rem 0.5rem;"
+                placeholder="例: username@gmail.com">
+              <datalist id="userEmailList"></datalist>
             </div>
           </div>
 
@@ -232,12 +282,15 @@
             </div>
             <div class="form-group" style="flex: 1;">
               <label for="resNotes">備考・使用目的</label>
-              <input type="text" id="resNotes" class="form-control" placeholder="例: サンプルAの蛍光撮影など">
+              <input type="text" id="resNotes" name="notes" list="resNotesList" autocomplete="on" class="form-control" placeholder="例: 時間帯応相談・Injection, Implantなど">
+              <datalist id="resNotesList"></datalist>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary btn-sm" id="deleteRevModalBtn" style="display: none; color: var(--danger-color); margin-right: auto;" onclick="handleModalDeleteReservation()">
+          <button type="button" class="btn btn-secondary btn-sm" id="deleteRevModalBtn"
+            style="display: none; color: var(--danger-color); margin-right: auto;"
+            onclick="handleModalDeleteReservation()">
             <i class="fa-solid fa-trash-can"></i> 予約を削除
           </button>
           <button type="button" class="btn btn-secondary btn-sm" onclick="closeReservationModal()">キャンセル</button>
@@ -260,11 +313,12 @@
         </p>
         <div class="form-group">
           <label for="gasUrlInput">GAS ウェブアプリ URL</label>
-          <input type="url" id="gasUrlInput" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+          <input type="url" id="gasUrlInput" class="form-control"
+            placeholder="https://script.google.com/macros/s/.../exec">
         </div>
         <div class="form-group">
-          <label for="gasCalendarIdInput">同期先 Google カレンダー ID (任意)</label>
-          <input type="text" id="gasCalendarIdInput" class="form-control" placeholder="primary (空欄の場合はメインカレンダー)">
+          <label for="gasCalendarIdInput">共通 同期先 Google カレンダー ID (任意)</label>
+          <input type="text" id="gasCalendarIdInput" class="form-control" placeholder="空欄の場合はGoogleカレンダー同期なし (指定時のみ同期)">
         </div>
         <div style="font-size: 0.775rem; background: #f1f5f9; padding: 0.65rem; border-radius: 6px;">
           <strong>設定方法:</strong><br>
@@ -314,4 +368,5 @@
 
   <script src="app.js"></script>
 </body>
+
 </html>
