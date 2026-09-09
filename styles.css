@@ -1116,3 +1116,20 @@ header {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }
+
+/*
+ * Touch devices need extra scrollable space after the reservation buttons.
+ * This lifts the final button above browser toolbars and the home indicator.
+ */
+@media (hover: none) and (pointer: coarse), (max-width: 768px) {
+  #reservationModal .modal > form {
+    scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+
+  #reservationModal .modal > form::after {
+    content: "";
+    display: block;
+    width: 100%;
+    flex: 0 0 calc(4rem + env(safe-area-inset-bottom));
+  }
+}
