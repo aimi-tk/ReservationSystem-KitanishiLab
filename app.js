@@ -64,7 +64,7 @@ function initApp() {
 
   const calInput = document.getElementById('gasCalendarIdInput');
   if (calInput) calInput.value = state.calendarId;
-  
+
   if (state.gasUrl) {
     document.getElementById('gasUrlInput').value = state.gasUrl;
     refreshData();
@@ -271,7 +271,7 @@ function updateDateDisplay() {
   const dayOfWeek = dayNames[state.currentDate.getDay()];
 
   document.getElementById('currentDateDisplay').textContent = `${yyyy}年${mm}月${dd}日(${dayOfWeek})`;
-  
+
   const isoStr = formatDateISO(state.currentDate);
   document.getElementById('datePicker').value = isoStr;
 }
@@ -404,7 +404,7 @@ function renderMonthlyView() {
   for (let h = startHour; h < endHour; h++) {
     const cell = document.createElement('div');
     cell.className = 'timeline-hour-cell';
-    
+
     const label = document.createElement('span');
     label.className = 'timeline-hour-label';
     label.textContent = `${String(h).padStart(2, '0')}:00`;
@@ -541,7 +541,7 @@ function renderTimelineView() {
   for (let h = startHour; h < endHour; h++) {
     const cell = document.createElement('div');
     cell.className = 'timeline-hour-cell';
-    
+
     const label = document.createElement('span');
     label.className = 'timeline-hour-label';
     label.textContent = `${String(h).padStart(2, '0')}:00`;
@@ -1027,7 +1027,7 @@ function updatePerUserDatalists(targetUserName) {
   const trimmedName = (targetUserName || '').trim().toLowerCase();
 
   // 過去予約データの中から、入力された「使用者名」に一致する予約のみを抽出
-  const userReservations = trimmedName 
+  const userReservations = trimmedName
     ? state.reservations.filter(r => (r.userName || '').trim().toLowerCase() === trimmedName)
     : [];
 
@@ -1065,7 +1065,7 @@ function openReservationModal() {
   if (syncCheck) syncCheck.checked = true;
 
   const calInput = document.getElementById('resCalendarId');
-  if (calInput) calInput.value = state.calendarId || '';
+  if (calInput) calInput.value = '';
   toggleCalendarIdInput();
 
   populateAutocompleteDatalists();
@@ -1084,10 +1084,10 @@ function openReservationModalWithTime(resId, dateStr, hour) {
   document.getElementById('resSelect').value = resId;
   document.getElementById('resStartDate').value = dateStr;
   document.getElementById('resEndDate').value = dateStr;
-  
+
   const hStr = String(hour).padStart(2, '0');
   const hEndStr = String(hour + 1).padStart(2, '0');
-  
+
   setSelectValue('resStartTime', `${hStr}:00`);
   setSelectValue('resEndTime', `${hEndStr}:00`);
 }
@@ -1118,7 +1118,7 @@ function editReservationModal(revId) {
   document.getElementById('resMetaInfo').style.display = 'block';
 
   document.getElementById('resSelect').value = rev.resourceId;
-  
+
   const sDate = new Date(rev.startTime);
   const eDate = new Date(rev.endTime);
 
@@ -1129,7 +1129,7 @@ function editReservationModal(revId) {
 
   document.getElementById('userName').value = rev.userName || '';
   document.getElementById('resNotes').value = rev.notes || '';
-  
+
   const syncCheck = document.getElementById('syncCalendarCheck');
   if (syncCheck) {
     syncCheck.checked = (rev.syncCalendar !== false);
@@ -1409,7 +1409,7 @@ function editResourceModal(resId) {
   document.getElementById('editResId').value = res.id;
   document.getElementById('resourceModalTitle').textContent = '機器・部屋の編集';
   document.getElementById('saveResBtn').textContent = '更新する';
-  
+
   document.getElementById('newResName').value = res.name;
   document.getElementById('newResLocation').value = res.location || '';
   document.getElementById('newResDesc').value = res.description || '';

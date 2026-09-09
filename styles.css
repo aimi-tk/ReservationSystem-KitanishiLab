@@ -113,8 +113,13 @@ header {
   border-radius: 50%;
 }
 
-.status-badge.demo .status-dot { background-color: #f59e0b; }
-.status-badge.live .status-dot { background-color: #10b981; }
+.status-badge.demo .status-dot {
+  background-color: #f59e0b;
+}
+
+.status-badge.live .status-dot {
+  background-color: #10b981;
+}
 
 /* Buttons */
 .btn {
@@ -135,6 +140,7 @@ header {
   background-color: var(--primary-color);
   color: white;
 }
+
 .btn-primary:hover {
   background-color: var(--primary-hover);
   box-shadow: var(--shadow-sm);
@@ -145,6 +151,7 @@ header {
   border-color: var(--border-color);
   color: var(--text-main);
 }
+
 .btn-secondary:hover {
   background-color: var(--bg-color);
 }
@@ -154,6 +161,7 @@ header {
   color: var(--primary-color);
   background: transparent;
 }
+
 .btn-outline:hover {
   background-color: var(--primary-light);
 }
@@ -454,6 +462,7 @@ header {
   font-size: 0.65rem;
   margin-left: 4px;
 }
+
 .reservation-del-btn:hover {
   background: var(--danger-color);
 }
@@ -558,6 +567,7 @@ header {
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-color);
   overflow: hidden;
+  overscroll-behavior: contain;
   transform: translateY(20px);
   transition: transform 0.2s ease;
   display: flex;
@@ -827,7 +837,7 @@ header {
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
   transition: transform 0.1s ease, filter 0.1s ease;
 }
 
@@ -903,7 +913,7 @@ header {
     margin-bottom: 0.25rem;
   }
 
-  .toolbar > div:last-child {
+  .toolbar>div:last-child {
     flex-direction: column;
     align-items: stretch;
     width: 100%;
@@ -987,7 +997,8 @@ header {
   }
 
   .form-control {
-    font-size: 16px; /* iOS Safari prevent auto zoom */
+    font-size: 16px;
+    /* iOS Safari prevent auto zoom */
   }
 
   .modal-footer {
