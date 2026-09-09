@@ -1034,3 +1034,37 @@ header {
     font-size: 0.725rem;
   }
 }
+
+/* ==========================================
+   スマートフォン向け（画面幅768px以下）のモーダルカスタマイズ
+   ========================================== */
+@media (max-width: 768px) {
+
+  /* バックドロップの配置を下揃えに変更 */
+  .modal-backdrop {
+    align-items: flex-end;
+    /* 画面下部に配置 */
+  }
+
+  /* スマホ時のアニメーション（下から上へのスライドイン） */
+  .modal-backdrop .modal {
+    transform: translateY(100%);
+  }
+
+  .modal-backdrop.open .modal {
+    transform: translateY(0);
+  }
+
+  /* モーダル本体の高さを90%固定＆下部に密着 */
+  .modal,
+  .modal.modal-compact {
+    width: 100%;
+    max-width: 100%;
+    height: 90vh;
+    height: 90dvh;
+    /* 👈 スマホ画面の高さの 90% に固定 */
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    /* 上の角だけ丸く */
+    border-bottom: none;
+  }
+}
