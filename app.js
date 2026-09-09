@@ -61,7 +61,6 @@ function initApp() {
   updateDateDisplay();
   initColorPicker();
   populateTimeSelects();
-  initModalTouchEvents();
 
   const calInput = document.getElementById('gasCalendarIdInput');
   if (calInput) calInput.value = state.calendarId;
@@ -74,16 +73,6 @@ function initApp() {
   }
 
   resetReservationFormTimes();
-}
-
-function initModalTouchEvents() {
-  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
-    backdrop.addEventListener('touchmove', (e) => {
-      if (e.target === backdrop) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-  });
 }
 
 /**
@@ -1082,7 +1071,7 @@ function openReservationModal() {
   populateAutocompleteDatalists();
   selectColor(PRESET_COLORS[0]);
   resetReservationFormTimes();
-  openModal('reservationModal');
+  document.getElementById('reservationModal').classList.add('open');
 }
 
 function openReservationModalForResource(resId) {
@@ -1154,11 +1143,11 @@ function editReservationModal(revId) {
 
   selectColor(rev.color || PRESET_COLORS[0]);
 
-  openModal('reservationModal');
+  document.getElementById('reservationModal').classList.add('open');
 }
 
 function closeReservationModal() {
-  closeModal('reservationModal');
+  document.getElementById('reservationModal').classList.remove('open');
 }
 
 function renderModalResourceOptions() {
@@ -1405,31 +1394,12 @@ async function deleteReservation(revId) {
   }
 }
 
-function openModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.classList.add('open');
-    document.body.classList.add('modal-open');
-  }
-}
-
-function closeModal(modalId) {
-  const modal = document.getElementById(modalId);
-  if (modal) {
-    modal.classList.remove('open');
-  }
-  const remainingOpen = document.querySelector('.modal-backdrop.open');
-  if (!remainingOpen) {
-    document.body.classList.remove('modal-open');
-  }
-}
-
 function openResourceModal() {
   document.getElementById('editResId').value = '';
   document.getElementById('resourceModalTitle').textContent = '機器・部屋の追加';
   document.getElementById('saveResBtn').textContent = '登録する';
   document.getElementById('resourceForm').reset();
-  openModal('resourceModal');
+  document.getElementById('resourceModal').classList.add('open');
 }
 
 function editResourceModal(resId) {
@@ -1444,11 +1414,11 @@ function editResourceModal(resId) {
   document.getElementById('newResLocation').value = res.location || '';
   document.getElementById('newResDesc').value = res.description || '';
 
-  openModal('resourceModal');
+  document.getElementById('resourceModal').classList.add('open');
 }
 
 function closeResourceModal() {
-  closeModal('resourceModal');
+  document.getElementById('resourceModal').classList.remove('open');
 }
 
 async function handleResourceSubmit(event) {
@@ -1577,11 +1547,11 @@ function openConfigModal() {
   const calInput = document.getElementById('gasCalendarIdInput');
   if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
 
-  openModal('configModal');
+  document.getElementById('configModal').classList.add('open');
 }
 
 function closeConfigModal() {
-  closeModal('configModal');
+  document.getElementById('configModal').classList.remove('open');
 }
 
 function saveGasConfig() {

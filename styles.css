@@ -525,20 +525,6 @@ header {
   z-index: 2;
 }
 
-/* Modal open background scroll lock */
-body.modal-open {
-  overflow: hidden !important;
-  touch-action: none;
-}
-
-body.modal-open .main-container,
-body.modal-open .content-area,
-body.modal-open .view-container,
-body.modal-open header {
-  overflow: hidden !important;
-  pointer-events: none !important;
-}
-
 /* Modal Window */
 .modal-backdrop {
   position: fixed;
@@ -559,8 +545,7 @@ body.modal-open header {
 
 .modal-backdrop.open {
   opacity: 1;
-  pointer-events: auto !important;
-  touch-action: none;
+  pointer-events: auto;
 }
 
 .modal {
@@ -577,7 +562,6 @@ body.modal-open header {
   transition: transform 0.2s ease;
   display: flex;
   flex-direction: column;
-  pointer-events: auto !important;
 }
 
 .modal.modal-compact {
@@ -609,7 +593,6 @@ body.modal-open header {
   align-items: center;
   flex-shrink: 0;
   background: var(--card-bg);
-  pointer-events: auto !important;
 }
 
 .modal-title {
@@ -631,10 +614,7 @@ body.modal-open header {
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
   flex: 1;
-  pointer-events: auto !important;
 }
 
 .modal-footer {
