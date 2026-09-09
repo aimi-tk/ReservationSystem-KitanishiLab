@@ -293,7 +293,7 @@ header {
   flex: 1;
   display: flex;
   position: relative;
-  margin-right: 25px;
+  margin: 0 25px;
 }
 
 .timeline-hour-cell {
@@ -378,7 +378,7 @@ header {
   display: flex;
   position: relative;
   cursor: crosshair;
-  margin-right: 25px;
+  margin-right: 0 25px;
 }
 
 .timeline-grid-cell {
