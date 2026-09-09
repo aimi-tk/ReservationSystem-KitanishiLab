@@ -26,13 +26,14 @@ const PRESET_COLORS = [
   "#18181b"  // Charcoal (ダークグレー)
 ];
 
-// アプリケーション設定 (デプロイ済みGAS URLの既定値。事前埋め込みでスマホ側入力不要)
+// アプリケーション設定 (デプロイ済みGAS URL・カレンダーIDの既定値。事前埋め込みでスマホ側入力不要)
 const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "";
+const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "";
 
 // アプリケーション状態
 let state = {
   gasUrl: localStorage.getItem('kitanishi_gas_url') || DEFAULT_GAS_URL,
-  calendarId: localStorage.getItem('kitanishi_gas_calendar_id') || '',
+  calendarId: localStorage.getItem('kitanishi_gas_calendar_id') || DEFAULT_CALENDAR_ID,
   isLiveMode: false,
   currentDate: new Date(),
   currentView: 'timeline', // 'timeline', 'monthly', 'list', 'resourceMgmt'
@@ -1540,8 +1541,12 @@ async function moveResourceOrder(resId, direction) {
 }
 
 function openConfigModal() {
+  const urlInput = document.getElementById('gasUrlInput');
+  if (urlInput) urlInput.value = state.gasUrl || DEFAULT_GAS_URL;
+
   const calInput = document.getElementById('gasCalendarIdInput');
-  if (calInput) calInput.value = state.calendarId || '';
+  if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
+
   document.getElementById('configModal').classList.add('open');
 }
 
