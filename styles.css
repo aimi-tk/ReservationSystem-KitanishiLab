@@ -578,6 +578,19 @@ header {
   max-width: 640px;
 }
 
+/*
+ * Keep forms inside a modal within the modal's available height.
+ * Without this flex container, .modal-body cannot shrink and its
+ * overflow-y scrollbar does not work reliably on mobile browsers.
+ */
+.modal > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .modal-compact .modal-header {
   padding: 0.65rem 1rem;
 }
@@ -624,7 +637,12 @@ header {
   flex-direction: column;
   gap: 1rem;
   overflow-y: auto;
-  flex: 1;
+  overflow-x: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
 }
 
 .modal-footer {
@@ -988,7 +1006,8 @@ header {
     gap: 0.75rem;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .form-row {
@@ -1066,5 +1085,10 @@ header {
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     /* 上の角だけ丸く */
     border-bottom: none;
+  }
+
+  /* Leave room around the iPhone home indicator while scrolling. */
+  .modal-body {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }
