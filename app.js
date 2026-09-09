@@ -43,6 +43,51 @@ let state = {
   reservations: []
 };
 
+// モーダル表示中は背景ページを固定する（iOS / Android対応）
+let pageScrollLockState = null;
+
+function lockPageScroll() {
+  if (pageScrollLockState) return;
+
+  const bodyStyle = document.body.style;
+  const scrollY = window.scrollY || window.pageYOffset || 0;
+
+  pageScrollLockState = {
+    scrollY,
+    position: bodyStyle.position,
+    top: bodyStyle.top,
+    left: bodyStyle.left,
+    right: bodyStyle.right,
+    width: bodyStyle.width,
+    overflow: bodyStyle.overflow
+  };
+
+  bodyStyle.position = 'fixed';
+  bodyStyle.top = `-${scrollY}px`;
+  bodyStyle.left = '0';
+  bodyStyle.right = '0';
+  bodyStyle.width = '100%';
+  bodyStyle.overflow = 'hidden';
+}
+
+function unlockPageScroll() {
+  // 別のモーダルが開いている間は背景固定を維持する
+  if (document.querySelector('.modal-backdrop.open') || !pageScrollLockState) return;
+
+  const bodyStyle = document.body.style;
+  const savedState = pageScrollLockState;
+  pageScrollLockState = null;
+
+  bodyStyle.position = savedState.position;
+  bodyStyle.top = savedState.top;
+  bodyStyle.left = savedState.left;
+  bodyStyle.right = savedState.right;
+  bodyStyle.width = savedState.width;
+  bodyStyle.overflow = savedState.overflow;
+
+  window.scrollTo(0, savedState.scrollY);
+}
+
 // 初期サンプルデータ
 const DEFAULT_RESOURCES = [
   { id: "res-1", name: "共焦点顕微鏡 (Confocal Laser)", location: "201号室", description: "蛍光観察・画像解析用" },
@@ -1071,6 +1116,7 @@ function openReservationModal() {
   populateAutocompleteDatalists();
   selectColor(PRESET_COLORS[0]);
   resetReservationFormTimes();
+  lockPageScroll();
   document.getElementById('reservationModal').classList.add('open');
 }
 
@@ -1143,11 +1189,13 @@ function editReservationModal(revId) {
 
   selectColor(rev.color || PRESET_COLORS[0]);
 
+  lockPageScroll();
   document.getElementById('reservationModal').classList.add('open');
 }
 
 function closeReservationModal() {
   document.getElementById('reservationModal').classList.remove('open');
+  unlockPageScroll();
 }
 
 function renderModalResourceOptions() {
@@ -1399,6 +1447,7 @@ function openResourceModal() {
   document.getElementById('resourceModalTitle').textContent = '機器・部屋の追加';
   document.getElementById('saveResBtn').textContent = '登録する';
   document.getElementById('resourceForm').reset();
+  lockPageScroll();
   document.getElementById('resourceModal').classList.add('open');
 }
 
@@ -1414,11 +1463,13 @@ function editResourceModal(resId) {
   document.getElementById('newResLocation').value = res.location || '';
   document.getElementById('newResDesc').value = res.description || '';
 
+  lockPageScroll();
   document.getElementById('resourceModal').classList.add('open');
 }
 
 function closeResourceModal() {
   document.getElementById('resourceModal').classList.remove('open');
+  unlockPageScroll();
 }
 
 async function handleResourceSubmit(event) {
@@ -1547,11 +1598,13 @@ function openConfigModal() {
   const calInput = document.getElementById('gasCalendarIdInput');
   if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
 
+  lockPageScroll();
   document.getElementById('configModal').classList.add('open');
 }
 
 function closeConfigModal() {
   document.getElementById('configModal').classList.remove('open');
+  unlockPageScroll();
 }
 
 function saveGasConfig() {
