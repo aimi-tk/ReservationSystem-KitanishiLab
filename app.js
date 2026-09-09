@@ -28,7 +28,7 @@ const PRESET_COLORS = [
 
 // アプリケーション設定 (デプロイ済みGAS URL・カレンダーIDの既定値。事前埋め込みでスマホ側入力不要)
 const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "";
-const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "";
+const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "https://calendar.google.com/calendar/embed?src=c_a43e9815af71f5b415dc86345a06e218de8d686f8667ec06c9d740b74bbbe451%40group.calendar.google.com&ctz=Asia%2FTokyo";
 
 // アプリケーション状態
 let state = {
@@ -1065,7 +1065,7 @@ function openReservationModal() {
   if (syncCheck) syncCheck.checked = true;
 
   const calInput = document.getElementById('resCalendarId');
-  if (calInput) calInput.value = '';
+  if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
   toggleCalendarIdInput();
 
   populateAutocompleteDatalists();
