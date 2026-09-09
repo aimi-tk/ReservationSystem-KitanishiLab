@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#2563eb">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20260909-5">
+  <link rel="stylesheet" href="styles.css?v=20260909-6">
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -307,7 +307,8 @@
         <div class="modal-title">Google Drive 連携設定</div>
         <button class="modal-close" onclick="closeConfigModal()">&times;</button>
       </div>
-      <div class="modal-body">
+      <div class="modal-scroll-content">
+        <div class="modal-body">
         <p style="font-size: 0.825rem; color: var(--text-muted);">
           Google Apps Script (GAS) のウェブアプリURLを設定すると、Google Drive上のスプレッドシートと自動同期します。
         </p>
@@ -326,10 +327,11 @@
           1. 付属の <code>gas_backend.js</code> をスプレッドシートのApps Scriptに張り付け。<br>
           2. Webアプリとしてデプロイして発行されたURLをここに入力します。
         </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="switchToDemoMode()">デモモードにする</button>
-        <button type="button" class="btn btn-primary" onclick="saveGasConfig()">設定を保存して接続</button>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="switchToDemoMode()">デモモードにする</button>
+          <button type="button" class="btn btn-primary" onclick="saveGasConfig()">設定を保存して接続</button>
+        </div>
       </div>
     </div>
   </div>
@@ -367,7 +369,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260909-5"></script>
+  <script src="app.js?v=20260909-6"></script>
 </body>
 
 </html>

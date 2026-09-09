@@ -679,6 +679,31 @@ header {
   flex: 0 0 auto;
 }
 
+/* Drive settings: keep the header fixed and scroll its body and footer together. */
+#configModal .modal-scroll-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+#configModal .modal-body {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  touch-action: auto;
+}
+
+#configModal .modal-footer {
+  flex: 0 0 auto;
+}
+
 /* Forms */
 .form-group {
   display: flex;
@@ -1118,18 +1143,20 @@ header {
 }
 
 /*
- * Touch devices need extra scrollable space after the reservation buttons.
+ * Touch devices need extra scrollable space after the modal buttons.
  * This lifts the final button above browser toolbars and the home indicator.
  */
 @media (hover: none) and (pointer: coarse), (max-width: 768px) {
-  #reservationModal .modal > form {
-    scroll-padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  #reservationModal .modal > form,
+  #configModal .modal-scroll-content {
+    scroll-padding-bottom: calc(8rem + env(safe-area-inset-bottom));
   }
 
-  #reservationModal .modal > form::after {
+  #reservationModal .modal > form::after,
+  #configModal .modal-scroll-content::after {
     content: "";
     display: block;
     width: 100%;
-    flex: 0 0 calc(4rem + env(safe-area-inset-bottom));
+    flex: 0 0 calc(8rem + env(safe-area-inset-bottom));
   }
 }
