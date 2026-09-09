@@ -655,6 +655,30 @@ header {
   flex-shrink: 0;
 }
 
+/*
+ * Reservation modal: scroll the fields and action buttons as one unit.
+ * The title header remains outside this form and therefore stays fixed.
+ */
+#reservationModal .modal > form {
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+#reservationModal .modal-body {
+  flex: 0 0 auto;
+  min-height: auto;
+  overflow: visible;
+  overscroll-behavior: auto;
+  touch-action: auto;
+}
+
+#reservationModal .modal-footer {
+  flex: 0 0 auto;
+}
+
 /* Forms */
 .form-group {
   display: flex;
