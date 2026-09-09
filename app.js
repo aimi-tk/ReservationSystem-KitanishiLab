@@ -26,8 +26,8 @@ const PRESET_COLORS = [
   "#18181b"  // Charcoal (ダークグレー)
 ];
 
-// アプリケーション設定 (デプロイ済みGAS URL・カレンダーIDの既定値。事前埋め込みでスマホ側入力不要)
-const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "https://calendar.google.com/calendar/embed?src=c_a43e9815af71f5b415dc86345a06e218de8d686f8667ec06c9d740b74bbbe451%40group.calendar.google.com&ctz=Asia%2FTokyo";
+// アプリケーション設定（GAS URLは利用者が連携設定画面で入力）
+const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "";
 const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "";
 
 // アプリケーション状態
