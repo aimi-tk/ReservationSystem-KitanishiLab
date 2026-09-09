@@ -11,7 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#2563eb">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=20260909-6">
+  <link rel="stylesheet" href="styles.css?v=20260909-7">
   <!-- FontAwesome for Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -251,23 +251,23 @@
                 style="display: inline-flex; align-items: center; gap: 0.35rem; cursor: pointer; font-weight: 500; font-size: 0.8rem;">
                 <input type="checkbox" id="syncCalendarCheck" checked
                   style="width: 15px; height: 15px; accent-color: var(--primary-color);"
-                  onchange="toggleCalendarIdInput()">
+                  onchange="toggleCalendarEmailInput()">
                 <i class="fa-solid fa-calendar-check" style="color: var(--primary-color);"></i>
                 <span>Google カレンダーにも同期する</span>
               </label>
             </div>
           </div>
 
-          <!-- Row 3.5: 同期先 Google カレンダー ID 指定 -->
-          <div id="calendarIdRow" class="form-row"
+          <!-- Row 3.5: 予約者本人へのGoogleカレンダー招待 -->
+          <div id="calendarEmailRow" class="form-row"
             style="align-items: center; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: -0.25rem;">
             <div class="form-group" style="flex: 1; margin-bottom: 0;">
-              <label for="resCalendarId" style="font-size: 0.725rem; color: var(--text-muted);">
-                <i class="fa-brands fa-google"></i> 同期先 Google カレンダー ID / メールアドレス (任意)
+              <label for="resGuestEmail" style="font-size: 0.725rem; color: var(--text-muted);">
+                <i class="fa-brands fa-google"></i> 予約者のGoogleメールアドレス
               </label>
-              <input type="text" id="resCalendarId" name="useremail" list="userEmailList" autocomplete="on" class="form-control"
+              <input type="email" id="resGuestEmail" name="useremail" list="userEmailList" autocomplete="email" class="form-control"
                 style="font-size: 0.8rem; padding: 0.25rem 0.5rem;"
-                placeholder="例: username@gmail.com">
+                placeholder="例: username@gmail.com" required>
               <datalist id="userEmailList"></datalist>
             </div>
           </div>
@@ -318,9 +318,10 @@
             placeholder="https://script.google.com/macros/s/.../exec">
         </div>
         <div class="form-group">
-          <label for="gasCalendarIdInput">共通 同期先 Google カレンダー ID / URL (任意)</label>
-          <input type="text" id="gasCalendarIdInput" class="form-control"
-            placeholder="例: kitanishilab@gmail.com または GoogleカレンダーURL (空欄可)">
+          <label for="commonCalendarIdDisplay">共通カレンダー ID（GASに設定済み）</label>
+          <input type="text" id="commonCalendarIdDisplay" class="form-control"
+            value="c_01aebf09407246c7474ed74abe3704ebccd739af23e70f63b8d3ba176506f6cd@group.calendar.google.com"
+            readonly>
         </div>
         <div style="font-size: 0.775rem; background: #f1f5f9; padding: 0.65rem; border-radius: 6px;">
           <strong>設定方法:</strong><br>
@@ -369,7 +370,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20260909-6"></script>
+  <script src="app.js?v=20260909-7"></script>
 </body>
 
 </html>

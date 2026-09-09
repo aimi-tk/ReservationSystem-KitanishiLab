@@ -10,6 +10,7 @@
 
 const SHEET_RESERVATIONS = "Reservations";
 const SHEET_RESOURCES = "Resources";
+const COMMON_CALENDAR_ID = "c_01aebf09407246c7474ed74abe3704ebccd739af23e70f63b8d3ba176506f6cd@group.calendar.google.com";
 
 /**
  * 初期データベース構築
@@ -44,7 +45,7 @@ function setupDatabase() {
   let revSheet = ss.getSheetByName(SHEET_RESERVATIONS);
   if (!revSheet) {
     revSheet = ss.insertSheet(SHEET_RESERVATIONS);
-    revSheet.appendRow(["ID", "ResourceId", "ResourceName", "StartTime", "EndTime", "UserName", "Notes", "CreatedAt", "Color", "UpdatedAt", "GoogleEventId", "CalendarId"]);
+    revSheet.appendRow(["ID", "ResourceId", "ResourceName", "StartTime", "EndTime", "UserName", "Notes", "CreatedAt", "Color", "UpdatedAt", "GoogleEventId", "CalendarId", "GuestEmail"]);
     revSheet.getRange("1:1").setFontWeight("bold").setBackground("#EFEFEF");
   } else {
     const headers = revSheet.getRange(1, 1, 1, revSheet.getLastColumn()).getValues()[0];
@@ -56,6 +57,9 @@ function setupDatabase() {
     }
     if (headers.length < 12 || headers[11] !== "CalendarId") {
       revSheet.getRange(1, 12).setValue("CalendarId").setFontWeight("bold");
+    }
+    if (headers.length < 13 || headers[12] !== "GuestEmail") {
+      revSheet.getRange(1, 13).setValue("GuestEmail").setFontWeight("bold");
     }
   }
 
@@ -111,7 +115,7 @@ function doPost(e) {
 
     if (action === "addReservation") return jsonResponse(addReservation(postData.data));
     if (action === "editReservation") return jsonResponse(editReservation(postData.data));
-    if (action === "deleteReservation") return jsonResponse(deleteReservation(postData.id, postData.calendarId));
+    if (action === "deleteReservation") return jsonResponse(deleteReservation(postData.id));
 
     if (action === "addResource") return jsonResponse(addResource(postData.data));
     if (action === "editResource") return jsonResponse(editResource(postData.data));
@@ -188,7 +192,9 @@ function getReservations() {
       color: String(row[8] || "#2563eb"),
       updatedAt: String(updatedAt || createdAt || ""),
       googleEventId: String(row[10] || ""),
-      calendarId: String(row[11] || "")
+      calendarId: String(row[11] || ""),
+      guestEmail: String(row[12] || ""),
+      syncCalendar: Boolean(row[10] && row[12])
     });
   }
   return reservations;
@@ -200,6 +206,7 @@ function getReservations() {
 function getTargetCalendar(calendarId) {
   if (!calendarId) return null;
   try {
+    // "primary" is supported only for cleaning up reservations made by older versions.
     if (calendarId === 'primary') return CalendarApp.getDefaultCalendar();
     const cal = CalendarApp.getCalendarById(calendarId);
     if (cal) return cal;
@@ -210,79 +217,100 @@ function getTargetCalendar(calendarId) {
   }
 }
 
-function syncGoogleCalendarEvent(data, calendarId) {
-  const targetCalId = calendarId || data.calendarId;
-  if (!targetCalId || data.syncCalendar === false) return "";
-
-  try {
-    const cal = getTargetCalendar(targetCalId);
-    if (!cal) return "";
-
-    const title = `[予約] ${data.resourceName || '機器・部屋'} (${data.userName})`;
-    const startTime = new Date(data.startTime);
-    const endTime = new Date(data.endTime);
-    const description = `使用者名: ${data.userName}\n機器・部屋: ${data.resourceName}\n備考: ${data.notes || 'なし'}`;
-
-    const event = cal.createEvent(title, startTime, endTime, { description });
-    return event ? event.getId() : "";
-  } catch (err) {
-    Logger.log("Google Calendar Creation error: " + err.toString());
-    return "";
+function getCommonCalendar() {
+  const calendar = getTargetCalendar(COMMON_CALENDAR_ID);
+  if (!calendar) {
+    throw new Error("共通カレンダーが見つかりません。GAS所有者のカレンダーIDと権限を確認してください。");
   }
+  return calendar;
 }
 
-function updateGoogleCalendarEvent(googleEventId, data, calendarId) {
-  const calId = calendarId || data.calendarId;
-  if (!calId || data.syncCalendar === false) {
-    if (googleEventId) deleteGoogleCalendarEvent(googleEventId, calId);
+function getGuestEmail(data) {
+  const email = String(data.guestEmail || "").trim();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("予約者のGoogleメールアドレスが正しくありません。");
+  }
+  return email;
+}
+
+function getCalendarEventFields(data) {
+  return {
+    title: `[予約] ${data.resourceName || '機器・部屋'} (${data.userName})`,
+    startTime: new Date(data.startTime),
+    endTime: new Date(data.endTime),
+    description: `使用者名: ${data.userName}\n機器・部屋: ${data.resourceName}\n備考: ${data.notes || 'なし'}`
+  };
+}
+
+function syncGoogleCalendarEvent(data) {
+  if (data.syncCalendar === false) return "";
+
+  const guestEmail = getGuestEmail(data);
+  const cal = getCommonCalendar();
+  const fields = getCalendarEventFields(data);
+  const event = cal.createEvent(fields.title, fields.startTime, fields.endTime, {
+    description: fields.description,
+    guests: guestEmail,
+    sendInvites: true
+  });
+
+  if (!event) throw new Error("共通カレンダーへの予定作成に失敗しました。");
+  return event.getId();
+}
+
+function updateGoogleCalendarEvent(googleEventId, data, storedCalendarId) {
+  if (data.syncCalendar === false) {
+    if (googleEventId) deleteGoogleCalendarEvent(googleEventId, storedCalendarId || COMMON_CALENDAR_ID);
     return "";
   }
 
+  const guestEmail = getGuestEmail(data);
+
   if (!googleEventId) {
-    return syncGoogleCalendarEvent(data, calId);
+    return syncGoogleCalendarEvent(data);
   }
 
+  // Older reservations may exist on another calendar. Move them to the new common calendar.
+  if (storedCalendarId && storedCalendarId !== COMMON_CALENDAR_ID) {
+    deleteGoogleCalendarEvent(googleEventId, storedCalendarId);
+    return syncGoogleCalendarEvent(data);
+  }
+
+  const cal = getCommonCalendar();
+  let event = null;
   try {
-    const cal = getTargetCalendar(calId);
-    if (!cal) return googleEventId;
-
-    let event = null;
-    try {
-      event = cal.getEventById(googleEventId);
-    } catch (e) {
-      Logger.log("Event lookup failed: " + e.toString());
-    }
-
-    if (!event) {
-      return syncGoogleCalendarEvent(data, calId);
-    }
-
-    const title = `[予約] ${data.resourceName || '機器・部屋'} (${data.userName})`;
-    const startTime = new Date(data.startTime);
-    const endTime = new Date(data.endTime);
-    const description = `使用者名: ${data.userName}\n機器・部屋: ${data.resourceName}\n備考: ${data.notes || 'なし'}`;
-
-    event.setTitle(title);
-    event.setTime(startTime, endTime);
-    event.setDescription(description);
-
-    return googleEventId;
+    event = cal.getEventById(googleEventId);
   } catch (err) {
-    Logger.log("Google Calendar Update error: " + err.toString());
-    return googleEventId;
+    Logger.log("Event lookup failed: " + err.toString());
   }
+
+  if (!event) return syncGoogleCalendarEvent(data);
+
+  const fields = getCalendarEventFields(data);
+  event.setTitle(fields.title);
+  event.setTime(fields.startTime, fields.endTime);
+  event.setDescription(fields.description);
+
+  const desiredEmail = guestEmail.toLowerCase();
+  const currentGuests = event.getGuestList();
+  currentGuests.forEach(guest => {
+    if (guest.getEmail().toLowerCase() !== desiredEmail) {
+      event.removeGuest(guest.getEmail());
+    }
+  });
+  if (!currentGuests.some(guest => guest.getEmail().toLowerCase() === desiredEmail)) {
+    event.addGuest(guestEmail);
+  }
+
+  return googleEventId;
 }
 
 function deleteGoogleCalendarEvent(googleEventId, calendarId) {
   if (!googleEventId) return;
-  try {
-    const cal = getTargetCalendar(calendarId);
-    if (!cal) return;
-    const event = cal.getEventById(googleEventId);
-    if (event) event.deleteEvent();
-  } catch (err) {
-    Logger.log("Google Calendar Delete error: " + err.toString());
-  }
+  const cal = getTargetCalendar(calendarId || COMMON_CALENDAR_ID);
+  if (!cal) throw new Error("予約に紐づくGoogleカレンダーが見つかりません。");
+  const event = cal.getEventById(googleEventId);
+  if (event) event.deleteEvent();
 }
 
 function addReservation(data) {
@@ -309,7 +337,7 @@ function addReservation(data) {
   const newId = "rev-" + new Date().getTime() + "-" + Math.floor(Math.random() * 1000);
   const nowISO = new Date().toISOString();
 
-  const googleEventId = syncGoogleCalendarEvent(data, data.calendarId);
+  const googleEventId = syncGoogleCalendarEvent(data);
 
   revSheet.appendRow([
     newId,
@@ -323,7 +351,8 @@ function addReservation(data) {
     data.color || "#2563eb",
     nowISO,
     googleEventId,
-    data.calendarId || ""
+    googleEventId ? COMMON_CALENDAR_ID : "",
+    data.guestEmail || ""
   ]);
 
   return { status: "success", message: "予約が完了しました。" };
@@ -358,8 +387,7 @@ function editReservation(data) {
     if (String(rows[i][0]) === String(data.id)) {
       const existingGEventId = String(rows[i][10] || "");
       const existingCalendarId = String(rows[i][11] || "");
-      const targetCalendarId = data.calendarId || existingCalendarId;
-      const newGEventId = updateGoogleCalendarEvent(existingGEventId, data, targetCalendarId);
+      const newGEventId = updateGoogleCalendarEvent(existingGEventId, data, existingCalendarId);
 
       sheet.getRange(i + 1, 2).setValue(data.resourceId);
       sheet.getRange(i + 1, 3).setValue(data.resourceName || "");
@@ -370,7 +398,8 @@ function editReservation(data) {
       sheet.getRange(i + 1, 9).setValue(data.color || "#2563eb");
       sheet.getRange(i + 1, 10).setValue(nowISO);
       sheet.getRange(i + 1, 11).setValue(newGEventId);
-      sheet.getRange(i + 1, 12).setValue(targetCalendarId || "");
+      sheet.getRange(i + 1, 12).setValue(newGEventId ? COMMON_CALENDAR_ID : "");
+      sheet.getRange(i + 1, 13).setValue(data.guestEmail || "");
       return { status: "success", message: "予約内容を更新しました。" };
     }
   }
@@ -378,7 +407,7 @@ function editReservation(data) {
   return { status: "error", message: "対象の予約が見つかりませんでした。" };
 }
 
-function deleteReservation(id, calendarId) {
+function deleteReservation(id) {
   if (!id) return { status: "error", message: "予約IDが指定されていません。" };
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -389,9 +418,8 @@ function deleteReservation(id, calendarId) {
     if (String(rows[i][0]) === String(id)) {
       const googleEventId = String(rows[i][10] || "");
       const storedCalendarId = String(rows[i][11] || "");
-      const targetCalendarId = calendarId || storedCalendarId;
       if (googleEventId) {
-        deleteGoogleCalendarEvent(googleEventId, targetCalendarId);
+        deleteGoogleCalendarEvent(googleEventId, storedCalendarId || COMMON_CALENDAR_ID);
       }
       sheet.deleteRow(i + 1);
       return { status: "success", message: "予約を削除しました。" };

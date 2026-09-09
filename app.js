@@ -28,12 +28,10 @@ const PRESET_COLORS = [
 
 // アプリケーション設定（GAS URLは利用者が連携設定画面で入力）
 const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "";
-const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "";
 
 // アプリケーション状態
 let state = {
   gasUrl: localStorage.getItem('kitanishi_gas_url') || DEFAULT_GAS_URL,
-  calendarId: localStorage.getItem('kitanishi_gas_calendar_id') || DEFAULT_CALENDAR_ID,
   isLiveMode: false,
   currentDate: new Date(),
   currentView: 'timeline', // 'timeline', 'monthly', 'list', 'resourceMgmt'
@@ -106,9 +104,6 @@ function initApp() {
   updateDateDisplay();
   initColorPicker();
   populateTimeSelects();
-
-  const calInput = document.getElementById('gasCalendarIdInput');
-  if (calInput) calInput.value = state.calendarId;
 
   if (state.gasUrl) {
     document.getElementById('gasUrlInput').value = state.gasUrl;
@@ -1040,12 +1035,15 @@ function getResourceName(resId) {
   return r ? r.name : resId;
 }
 
-function toggleCalendarIdInput() {
+function toggleCalendarEmailInput() {
   const syncCheck = document.getElementById('syncCalendarCheck');
-  const row = document.getElementById('calendarIdRow');
+  const row = document.getElementById('calendarEmailRow');
+  const emailInput = document.getElementById('resGuestEmail');
+  const isEnabled = Boolean(syncCheck && syncCheck.checked);
   if (row) {
-    row.style.display = (syncCheck && syncCheck.checked) ? 'flex' : 'none';
+    row.style.display = isEnabled ? 'flex' : 'none';
   }
+  if (emailInput) emailInput.required = isEnabled;
 }
 
 function populateAutocompleteDatalists() {
@@ -1078,7 +1076,7 @@ function updatePerUserDatalists(targetUserName) {
 
   if (emailList) {
     emailList.innerHTML = '';
-    const uniqueEmails = [...new Set(userReservations.map(r => r.calendarId).filter(Boolean))];
+    const uniqueEmails = [...new Set(userReservations.map(r => r.guestEmail).filter(Boolean))];
     uniqueEmails.forEach(email => {
       const opt = document.createElement('option');
       opt.value = email;
@@ -1109,9 +1107,9 @@ function openReservationModal() {
   const syncCheck = document.getElementById('syncCalendarCheck');
   if (syncCheck) syncCheck.checked = true;
 
-  const calInput = document.getElementById('resCalendarId');
-  if (calInput) calInput.value = '';
-  toggleCalendarIdInput();
+  const guestEmailInput = document.getElementById('resGuestEmail');
+  if (guestEmailInput) guestEmailInput.value = '';
+  toggleCalendarEmailInput();
 
   populateAutocompleteDatalists();
   selectColor(PRESET_COLORS[0]);
@@ -1181,11 +1179,11 @@ function editReservationModal(revId) {
     syncCheck.checked = (rev.syncCalendar !== false);
   }
 
-  const calInput = document.getElementById('resCalendarId');
-  if (calInput) {
-    calInput.value = rev.calendarId || '';
+  const guestEmailInput = document.getElementById('resGuestEmail');
+  if (guestEmailInput) {
+    guestEmailInput.value = rev.guestEmail || '';
   }
-  toggleCalendarIdInput();
+  toggleCalendarEmailInput();
 
   selectColor(rev.color || PRESET_COLORS[0]);
 
@@ -1324,11 +1322,15 @@ async function handleReservationSubmit(event) {
   const resObj = state.resources.find(r => r.id === resourceId);
   const nowISO = new Date().toISOString();
   const syncCheckVal = document.getElementById('syncCalendarCheck') ? document.getElementById('syncCalendarCheck').checked : true;
-  const calInput = document.getElementById('resCalendarId');
-  const userEnteredCalId = (calInput && calInput.value.trim()) ? calInput.value.trim() : '';
+  const guestEmailInput = document.getElementById('resGuestEmail');
+  const guestEmail = (guestEmailInput && guestEmailInput.value.trim()) ? guestEmailInput.value.trim() : '';
 
-  // カレンダーIDが入力されており、かつ同期チェックがONの場合のみGoogleカレンダーに同期
-  const isSyncOn = Boolean(userEnteredCalId && syncCheckVal);
+  if (syncCheckVal && !guestEmail) {
+    showModalError('Googleカレンダーに同期する場合は、予約者のGoogleメールアドレスを入力してください。');
+    return;
+  }
+
+  const isSyncOn = Boolean(syncCheckVal && guestEmail);
 
   const revData = {
     resourceId,
@@ -1339,7 +1341,7 @@ async function handleReservationSubmit(event) {
     notes,
     color,
     syncCalendar: isSyncOn,
-    calendarId: isSyncOn ? userEnteredCalId : '',
+    guestEmail: isSyncOn ? guestEmail : '',
     updatedAt: nowISO
   };
 
@@ -1411,9 +1413,6 @@ function handleModalDeleteReservation() {
 async function deleteReservation(revId) {
   if (!confirm('この予約を削除してもよろしいですか？')) return;
 
-  const targetRev = state.reservations.find(r => r.id === revId);
-  const targetCalId = (targetRev && targetRev.calendarId) ? targetRev.calendarId : (state.calendarId || 'primary');
-
   if (state.isLiveMode && state.gasUrl) {
     try {
       updateStatusText("削除中...", false);
@@ -1422,8 +1421,7 @@ async function deleteReservation(revId) {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify({
           action: 'deleteReservation',
-          id: revId,
-          calendarId: targetCalId
+          id: revId
         })
       });
       const result = await res.json();
@@ -1595,9 +1593,6 @@ function openConfigModal() {
   const urlInput = document.getElementById('gasUrlInput');
   if (urlInput) urlInput.value = state.gasUrl || DEFAULT_GAS_URL;
 
-  const calInput = document.getElementById('gasCalendarIdInput');
-  if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
-
   lockPageScroll();
   document.getElementById('configModal').classList.add('open');
 }
@@ -1609,17 +1604,14 @@ function closeConfigModal() {
 
 function saveGasConfig() {
   const url = document.getElementById('gasUrlInput').value.trim();
-  const calIdInput = document.getElementById('gasCalendarIdInput');
-  const calId = calIdInput ? calIdInput.value.trim() : '';
 
   if (!url) {
     alert('URLを入力してください。');
     return;
   }
   state.gasUrl = url;
-  state.calendarId = calId;
   localStorage.setItem('kitanishi_gas_url', url);
-  localStorage.setItem('kitanishi_gas_calendar_id', calId);
+  localStorage.removeItem('kitanishi_gas_calendar_id');
   closeConfigModal();
   refreshData();
 }
