@@ -27,8 +27,8 @@ const PRESET_COLORS = [
 ];
 
 // アプリケーション設定 (デプロイ済みGAS URL・カレンダーIDの既定値。事前埋め込みでスマホ側入力不要)
-const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "";
-const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "https://calendar.google.com/calendar/embed?src=c_a43e9815af71f5b415dc86345a06e218de8d686f8667ec06c9d740b74bbbe451%40group.calendar.google.com&ctz=Asia%2FTokyo";
+const DEFAULT_GAS_URL = window.DEFAULT_GAS_URL || "https://calendar.google.com/calendar/embed?src=c_a43e9815af71f5b415dc86345a06e218de8d686f8667ec06c9d740b74bbbe451%40group.calendar.google.com&ctz=Asia%2FTokyo";
+const DEFAULT_CALENDAR_ID = window.DEFAULT_CALENDAR_ID || "";
 
 // アプリケーション状態
 let state = {
@@ -61,6 +61,7 @@ function initApp() {
   updateDateDisplay();
   initColorPicker();
   populateTimeSelects();
+  initModalTouchEvents();
 
   const calInput = document.getElementById('gasCalendarIdInput');
   if (calInput) calInput.value = state.calendarId;
@@ -73,6 +74,16 @@ function initApp() {
   }
 
   resetReservationFormTimes();
+}
+
+function initModalTouchEvents() {
+  document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('touchmove', (e) => {
+      if (e.target === backdrop) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+  });
 }
 
 /**
@@ -1065,13 +1076,13 @@ function openReservationModal() {
   if (syncCheck) syncCheck.checked = true;
 
   const calInput = document.getElementById('resCalendarId');
-  if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
+  if (calInput) calInput.value = state.calendarId || '';
   toggleCalendarIdInput();
 
   populateAutocompleteDatalists();
   selectColor(PRESET_COLORS[0]);
   resetReservationFormTimes();
-  document.getElementById('reservationModal').classList.add('open');
+  openModal('reservationModal');
 }
 
 function openReservationModalForResource(resId) {
@@ -1143,11 +1154,11 @@ function editReservationModal(revId) {
 
   selectColor(rev.color || PRESET_COLORS[0]);
 
-  document.getElementById('reservationModal').classList.add('open');
+  openModal('reservationModal');
 }
 
 function closeReservationModal() {
-  document.getElementById('reservationModal').classList.remove('open');
+  closeModal('reservationModal');
 }
 
 function renderModalResourceOptions() {
@@ -1394,12 +1405,31 @@ async function deleteReservation(revId) {
   }
 }
 
+function openModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.add('open');
+    document.body.classList.add('modal-open');
+  }
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.classList.remove('open');
+  }
+  const remainingOpen = document.querySelector('.modal-backdrop.open');
+  if (!remainingOpen) {
+    document.body.classList.remove('modal-open');
+  }
+}
+
 function openResourceModal() {
   document.getElementById('editResId').value = '';
   document.getElementById('resourceModalTitle').textContent = '機器・部屋の追加';
   document.getElementById('saveResBtn').textContent = '登録する';
   document.getElementById('resourceForm').reset();
-  document.getElementById('resourceModal').classList.add('open');
+  openModal('resourceModal');
 }
 
 function editResourceModal(resId) {
@@ -1414,11 +1444,11 @@ function editResourceModal(resId) {
   document.getElementById('newResLocation').value = res.location || '';
   document.getElementById('newResDesc').value = res.description || '';
 
-  document.getElementById('resourceModal').classList.add('open');
+  openModal('resourceModal');
 }
 
 function closeResourceModal() {
-  document.getElementById('resourceModal').classList.remove('open');
+  closeModal('resourceModal');
 }
 
 async function handleResourceSubmit(event) {
@@ -1547,11 +1577,11 @@ function openConfigModal() {
   const calInput = document.getElementById('gasCalendarIdInput');
   if (calInput) calInput.value = state.calendarId || DEFAULT_CALENDAR_ID;
 
-  document.getElementById('configModal').classList.add('open');
+  openModal('configModal');
 }
 
 function closeConfigModal() {
-  document.getElementById('configModal').classList.remove('open');
+  closeModal('configModal');
 }
 
 function saveGasConfig() {
