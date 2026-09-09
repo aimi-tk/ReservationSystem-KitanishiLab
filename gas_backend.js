@@ -235,7 +235,7 @@ function getGuestEmail(data) {
 
 function getCalendarEventFields(data) {
   return {
-    title: `[予約] ${data.resourceName || '機器・部屋'} (${data.userName})`,
+    title: `${data.resourceName || '機器・部屋'} (${data.userName})`,
     startTime: new Date(data.startTime),
     endTime: new Date(data.endTime),
     description: `使用者名: ${data.userName}\n機器・部屋: ${data.resourceName}\n備考: ${data.notes || 'なし'}`
