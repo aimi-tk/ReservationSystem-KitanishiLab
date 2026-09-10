@@ -1326,7 +1326,7 @@ async function handleReservationSubmit(event) {
   const guestEmail = (guestEmailInput && guestEmailInput.value.trim()) ? guestEmailInput.value.trim() : '';
 
   if (syncCheckVal && !guestEmail) {
-    showModalError('Googleカレンダーに同期する場合は、予約者のGoogleメールアドレスを入力してください。');
+    showModalError('カレンダー追加用メールを受け取る場合は、予約者のメールアドレスを入力してください。');
     return;
   }
 

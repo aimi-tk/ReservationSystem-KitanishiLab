@@ -13,6 +13,13 @@ const SHEET_RESOURCES = "Resources";
 const COMMON_CALENDAR_ID = "c_01aebf09407246c7474ed74abe3704ebccd739af23e70f63b8d3ba176506f6cd@group.calendar.google.com";
 
 /**
+ * 初回のみApps Scriptエディタから実行し、メール送信権限を承認する。
+ */
+function authorizeMailService() {
+  Logger.log("Remaining mail quota: " + MailApp.getRemainingDailyQuota());
+}
+
+/**
  * 初期データベース構築
  */
 function setupDatabase() {
@@ -242,16 +249,97 @@ function getCalendarEventFields(data) {
   };
 }
 
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function formatCalendarUrlDate(date) {
+  return Utilities.formatDate(date, "UTC", "yyyyMMdd'T'HHmmss'Z'");
+}
+
+function buildAddToGoogleCalendarUrl(data) {
+  const fields = getCalendarEventFields(data);
+  const params = {
+    action: "TEMPLATE",
+    text: fields.title,
+    dates: `${formatCalendarUrlDate(fields.startTime)}/${formatCalendarUrlDate(fields.endTime)}`,
+    details: fields.description,
+    ctz: "Asia/Tokyo"
+  };
+  const query = Object.keys(params)
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+    .join("&");
+  return `https://calendar.google.com/calendar/render?${query}`;
+}
+
+function formatMailDate(date) {
+  return Utilities.formatDate(date, "Asia/Tokyo", "yyyy年M月d日(E) HH:mm");
+}
+
+function sendReservationMail(data, notificationType) {
+  if (data.syncCalendar === false) return;
+
+  const guestEmail = getGuestEmail(data);
+  const fields = getCalendarEventFields(data);
+  const resourceName = data.resourceName || "機器・部屋";
+  const notes = data.notes || "なし";
+  const subject = `[機器予約] ：${resourceName}`;
+
+  let heading = "予約を受け付けました";
+  let notice = "下のボタンを押すと、ご自身のGoogleカレンダーに予定を追加できます。";
+  let buttonHtml = `
+    <p style="margin:24px 0;">
+      <a href="${escapeHtml(buildAddToGoogleCalendarUrl(data))}"
+         style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:6px;font-weight:bold;">
+        Googleカレンダーに追加
+      </a>
+    </p>`;
+
+  if (notificationType === "updated") {
+    heading = "予約内容が変更されました";
+    notice = "すでに個人カレンダーへ追加済みの場合、その予定は自動更新されません。古い予定を削除し、下のボタンから変更後の予定を追加してください。";
+  } else if (notificationType === "deleted") {
+    heading = "予約が削除されました";
+    notice = "個人カレンダーへ追加済みの予定は自動削除されません。お手数ですが、該当する予定を削除してください。";
+    buttonHtml = "";
+  }
+
+  const mailBody = `
+    <div style="font-family:Arial,'Noto Sans JP',sans-serif;color:#1f2937;line-height:1.7;">
+      <h2 style="font-size:18px;margin:0 0 16px;">${escapeHtml(heading)}</h2>
+      <table style="border-collapse:collapse;margin-bottom:16px;">
+        <tr><th style="text-align:left;padding:4px 16px 4px 0;">機器・部屋</th><td>${escapeHtml(resourceName)}</td></tr>
+        <tr><th style="text-align:left;padding:4px 16px 4px 0;">使用者</th><td>${escapeHtml(data.userName)}</td></tr>
+        <tr><th style="text-align:left;padding:4px 16px 4px 0;">開始</th><td>${escapeHtml(formatMailDate(fields.startTime))}</td></tr>
+        <tr><th style="text-align:left;padding:4px 16px 4px 0;">終了</th><td>${escapeHtml(formatMailDate(fields.endTime))}</td></tr>
+        <tr><th style="text-align:left;padding:4px 16px 4px 0;">備考</th><td>${escapeHtml(notes)}</td></tr>
+      </table>
+      <p>${escapeHtml(notice)}</p>
+      ${buttonHtml}
+      <p style="font-size:12px;color:#64748b;">このメールは機器・部屋予約システムから自動送信されています。</p>
+    </div>`;
+
+  MailApp.sendEmail({
+    to: guestEmail,
+    subject: subject,
+    htmlBody: mailBody,
+    name: "機器予約のお知らせ"
+  });
+}
+
 function syncGoogleCalendarEvent(data) {
   if (data.syncCalendar === false) return "";
 
-  const guestEmail = getGuestEmail(data);
+  getGuestEmail(data);
   const cal = getCommonCalendar();
   const fields = getCalendarEventFields(data);
   const event = cal.createEvent(fields.title, fields.startTime, fields.endTime, {
-    description: fields.description,
-    guests: guestEmail,
-    sendInvites: true
+    description: fields.description
   });
 
   if (!event) throw new Error("共通カレンダーへの予定作成に失敗しました。");
@@ -264,7 +352,7 @@ function updateGoogleCalendarEvent(googleEventId, data, storedCalendarId) {
     return "";
   }
 
-  const guestEmail = getGuestEmail(data);
+  getGuestEmail(data);
 
   if (!googleEventId) {
     return syncGoogleCalendarEvent(data);
@@ -291,16 +379,12 @@ function updateGoogleCalendarEvent(googleEventId, data, storedCalendarId) {
   event.setTime(fields.startTime, fields.endTime);
   event.setDescription(fields.description);
 
-  const desiredEmail = guestEmail.toLowerCase();
+  // Older versions invited the reservation holder as a guest. Remove all guests
+  // so future notifications are sent only through the custom email below.
   const currentGuests = event.getGuestList();
   currentGuests.forEach(guest => {
-    if (guest.getEmail().toLowerCase() !== desiredEmail) {
-      event.removeGuest(guest.getEmail());
-    }
+    event.removeGuest(guest.getEmail());
   });
-  if (!currentGuests.some(guest => guest.getEmail().toLowerCase() === desiredEmail)) {
-    event.addGuest(guestEmail);
-  }
 
   return googleEventId;
 }
@@ -355,6 +439,13 @@ function addReservation(data) {
     data.guestEmail || ""
   ]);
 
+  try {
+    sendReservationMail(data, "created");
+  } catch (mailError) {
+    Logger.log("Reservation mail failed: " + mailError.toString());
+    return { status: "success", message: "予約は完了しましたが、確認メールを送信できませんでした。" };
+  }
+
   return { status: "success", message: "予約が完了しました。" };
 }
 
@@ -400,6 +491,12 @@ function editReservation(data) {
       sheet.getRange(i + 1, 11).setValue(newGEventId);
       sheet.getRange(i + 1, 12).setValue(newGEventId ? COMMON_CALENDAR_ID : "");
       sheet.getRange(i + 1, 13).setValue(data.guestEmail || "");
+      try {
+        sendReservationMail(data, "updated");
+      } catch (mailError) {
+        Logger.log("Reservation update mail failed: " + mailError.toString());
+        return { status: "success", message: "予約内容は更新しましたが、確認メールを送信できませんでした。" };
+      }
       return { status: "success", message: "予約内容を更新しました。" };
     }
   }
@@ -418,10 +515,25 @@ function deleteReservation(id) {
     if (String(rows[i][0]) === String(id)) {
       const googleEventId = String(rows[i][10] || "");
       const storedCalendarId = String(rows[i][11] || "");
+      const deletedData = {
+        resourceName: String(rows[i][2] || ""),
+        startTime: rows[i][3],
+        endTime: rows[i][4],
+        userName: String(rows[i][5] || ""),
+        notes: String(rows[i][6] || ""),
+        guestEmail: String(rows[i][12] || ""),
+        syncCalendar: Boolean(rows[i][12])
+      };
       if (googleEventId) {
         deleteGoogleCalendarEvent(googleEventId, storedCalendarId || COMMON_CALENDAR_ID);
       }
       sheet.deleteRow(i + 1);
+      try {
+        sendReservationMail(deletedData, "deleted");
+      } catch (mailError) {
+        Logger.log("Reservation deletion mail failed: " + mailError.toString());
+        return { status: "success", message: "予約は削除しましたが、削除メールを送信できませんでした。" };
+      }
       return { status: "success", message: "予約を削除しました。" };
     }
   }

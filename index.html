@@ -237,7 +237,7 @@
             </div>
           </div>
 
-          <!-- Row 3: クイック時間設定 & Google カレンダー同期 -->
+          <!-- Row 3: クイック時間設定 & カレンダー追加メール -->
           <div class="form-row" style="align-items: center;">
             <div class="quick-duration-btns" style="margin-top: 0; flex: 1.2;">
               <span style="font-size: 0.725rem; color: var(--text-muted); min-width: max-content;">時間追加:</span>
@@ -253,17 +253,17 @@
                   style="width: 15px; height: 15px; accent-color: var(--primary-color);"
                   onchange="toggleCalendarEmailInput()">
                 <i class="fa-solid fa-calendar-check" style="color: var(--primary-color);"></i>
-                <span>Google カレンダーにも同期する</span>
+                <span>カレンダー追加用メールを受け取る</span>
               </label>
             </div>
           </div>
 
-          <!-- Row 3.5: 予約者本人へのGoogleカレンダー招待 -->
+          <!-- Row 3.5: 予約者本人へのカレンダー追加用メール -->
           <div id="calendarEmailRow" class="form-row"
             style="align-items: center; background: #f8fafc; padding: 0.35rem 0.6rem; border-radius: 6px; border: 1px dashed #cbd5e1; margin-top: -0.25rem;">
             <div class="form-group" style="flex: 1; margin-bottom: 0;">
               <label for="resGuestEmail" style="font-size: 0.725rem; color: var(--text-muted);">
-                <i class="fa-brands fa-google"></i> 予約者のGoogleメールアドレス
+                <i class="fa-regular fa-envelope"></i> 予約者のメールアドレス
               </label>
               <input type="email" id="resGuestEmail" name="useremail" list="userEmailList" autocomplete="email" class="form-control"
                 style="font-size: 0.8rem; padding: 0.25rem 0.5rem;"
